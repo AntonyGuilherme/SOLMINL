@@ -22,7 +22,7 @@ def _generate_difficult_thetas(n, m, normal_range, small_range):
     """
     num_cols = n - 1
     thetas_matrix = np.zeros((m, num_cols))
-    small_row_idx = random.randint(1, num_cols)
+    small_row_idx = random.randint(2, num_cols)
     for i in range(m):
         for j in range(num_cols):
             if i == small_row_idx:

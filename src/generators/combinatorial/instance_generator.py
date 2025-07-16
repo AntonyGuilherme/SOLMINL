@@ -10,20 +10,34 @@ import matplotlib
 matplotlib.use('Agg')
 
 
-def _generate_difficult_thetas(permutation_size, number_of_optimas, normal_range = (100, 200), small_range = (0.5,2)):
+def _generate_difficult_thetas(permutation_size, number_of_optimas):
+    small_range = (np.log(permutation_size - .5), np.log(permutation_size - .5) + 1)
+    normal_range = (2 * np.log(permutation_size - 1), 3*np.log(permutation_size - 1))
     num_cols = permutation_size - 1
     thetas_matrix = np.zeros((number_of_optimas, num_cols))
-    small_row_idx = np.random.randint(2, num_cols)
-
 
     for i in range(number_of_optimas):
-        if i == small_row_idx:
+        if i == 1:
             theta_i = np.random.uniform(*small_range)
             thetas_matrix[i, :] = theta_i
         else:
             theta_i = np.random.uniform(*normal_range)
             thetas_matrix[i, :] = theta_i
 
+    return thetas_matrix
+
+def _generate_easy_thetas(permutation_size, number_of_optimas):
+    small_range = (np.log(permutation_size - .5), np.log(permutation_size - .5) + 1)
+    normal_range = (2 * np.log(permutation_size - 1), 3*np.log(permutation_size - 1))
+    num_cols = permutation_size - 1 
+    thetas_matrix = np.zeros((number_of_optimas, num_cols))
+    for i in range(number_of_optimas):
+        if i == 0:
+            theta_0 = np.random.uniform(*small_range)
+            thetas_matrix[i,:] = theta_0
+        else:
+            theta_i = np.random.uniform(*normal_range)
+            thetas_matrix[i,:] = theta_i
     return thetas_matrix
 
 def _calculate_kendall_tau_distances(permutations):
@@ -75,7 +89,7 @@ def _create_instance_max(permutation_size: int, number_of_optimas: int):
 
     distances = _calculate_kendall_tau_distances(consensus_permutations)
 
-    thetas = _generate_difficult_thetas(permutation_size, number_of_optimas)
+    thetas = _generate_easy_thetas(permutation_size, number_of_optimas)
 
     zeta = Zvalue.Zvalue(permutation_size, number_of_optimas, thetas, "K")
 
@@ -86,6 +100,22 @@ def _create_instance_max(permutation_size: int, number_of_optimas: int):
     return Instance(consensus_permutations, solution, zeta, thetas)
 
 
+def _create_instance_min(permutation_size: int, number_of_optimas: int):
+
+    consensus_permutations =  _create_permutations(permutation_size, number_of_optimas)
+
+    distances = _calculate_kendall_tau_distances(consensus_permutations)
+
+    thetas = _generate_difficult_thetas(permutation_size, number_of_optimas)
+
+    zeta = Zvalue.Zvalue(permutation_size, number_of_optimas, thetas, "K")
+
+    instance_parameters = LinearProg.LinearProg(permutation_size, number_of_optimas, thetas, distances, "min", zeta)
+
+    solution = np.array([instance_parameters.x[i].value for i in range(number_of_optimas)])
+
+    return Instance(consensus_permutations, solution, zeta, thetas)
+
 class Permutation:
 
     def __init__(self, permutation_size, number_of_optimas):
@@ -93,8 +123,15 @@ class Permutation:
         self.number_of_optimas = number_of_optimas
         pass
 
-    def calc_parameters(self):
+    def calc_parameters_easy(self):
         instance_parameters = _create_instance_max(self.permutation_size, self.number_of_optimas)
+        self._extract_parameters(instance_parameters)
+
+    def calc_parameters_difficult(self):
+        instance_parameters = _create_instance_min(self.permutation_size, self.number_of_optimas)
+        self._extract_parameters(instance_parameters)
+
+    def _extract_parameters(self, instance_parameters):
         self.weights = instance_parameters.weights
         self.consensus = instance_parameters.consensus_permutations
         self.zetas = instance_parameters.zetas
@@ -106,7 +143,6 @@ class Permutation:
         max_possible_pairs = n * (n - 1) / 2
 
         for i in range(self.number_of_optimas):
-            # Calculate the Kendall tau correlation coefficient
             tau, _ = kendalltau(self.consensus[i], perm)
             discordant_pairs = (1 - tau) * max_possible_pairs / 2
             distance = round(discordant_pairs)
@@ -121,7 +157,7 @@ class Permutation:
 
     pass
 
-    def plot(self):
+    def plot(self, output_path):
         all_perms = list(itertools.permutations(range(1, self.permutation_size + 1)))
 
         # Evaluate all permutations and store their values and labels
@@ -144,7 +180,7 @@ class Permutation:
                 if np.array_equal(np.array(perm), np.array(consensus)):
                     consensus_indices.append(idx)
                     consensus_values.append(value)
-                    consensus_labels.append("".join(map(str, consensus)))
+                    consensus_labels.append(str(list(consensus)))
                     break
 
         # Calculate average value
@@ -154,6 +190,11 @@ class Permutation:
         plt.figure(figsize=(14, 6))
         plt.plot(x_vals, y_vals, marker='o', linestyle='-', color='skyblue', label='All Permutations')
         plt.scatter(consensus_indices, [y_vals[i] for i in consensus_indices], color='red', marker='x', s=100, label='Consensus')
+
+        # Add labels to consensus points
+        for idx, label in zip(consensus_indices, consensus_labels):
+            plt.annotate(label, (idx, y_vals[idx]), textcoords="offset points", xytext=(0,10), ha='center', fontsize=9, color='red')
+
         plt.axhline(avg_value, color='green', linestyle='--', label=f'Average Value: {avg_value:.4f}')
 
         plt.xticks([])
@@ -163,4 +204,4 @@ class Permutation:
         plt.grid(True, linestyle="--", alpha=0.5)
         plt.legend()
         plt.tight_layout()
-        plt.savefig("test.png")
+        plt.savefig(output_path)

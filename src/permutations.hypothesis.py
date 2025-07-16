@@ -1,10 +1,21 @@
 from generators.combinatorial.instance_generator import Permutation
 
+permutation = Permutation(5, 4)
 
-permutation = Permutation(5, 100)
+permutation.calc_parameters_easy()
 
-permutation.calc_parameters()
+for x in range(len(permutation.consensus)):
+    print(f"{permutation.consensus[x]} {permutation.evaluate(permutation.consensus[x])}")
 
-permutation.plot()
+permutation.plot("easy.png")
+
+
+print("difficult problem")
+permutation.calc_parameters_difficult()
+
+for x in range(len(permutation.consensus)):
+    print(f"{permutation.consensus[x]} {permutation.evaluate(permutation.consensus[x])}")
+
+permutation.plot("difficult.png")
 
 
