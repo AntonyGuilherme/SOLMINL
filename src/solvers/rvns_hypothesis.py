@@ -2,105 +2,14 @@ from src.generators.combinatorial.instance_generator import Permutation
 import numpy as np
 import copy
 import matplotlib.pyplot as plt
-
-def plot_optimization_histories(histories, titles=None, best_possible=None, output_path="historic.png"):
-    """
-    Plot multiple optimization histories side by side using lines.
-
-    Args:
-        histories (list of list): Each element is a list of objective values (history).
-        titles (list of str, optional): Titles for each subplot.
-        best_possible (list of float, optional): Best possible values for each history.
-    """
-    n = len(histories)
-    plt.figure(figsize=(6 * n, 5))
-
-    for i, history in enumerate(histories):
-        plt.subplot(1, n, i + 1)
-        plt.plot(range(len(history)), history, label='Objective Value', color=f'C{i}', marker='o', markersize=4)
-        plt.xlabel('Evaluations')
-        plt.ylabel('Objective Value')
-        best_found = np.max(history)
-        title = f'Optimization {i+1}\nBest Found: {best_found:.4f}'
-        if titles and i < len(titles):
-            title = f'{titles[i]}\nBest Found: {best_found:.4f}'
-        plt.title(title, fontsize=12, fontweight='bold')
-        plt.grid(True)
-
-        # Target line if provided
-        if best_possible and i < len(best_possible) and best_possible[i] is not None:
-            plt.axhline(y=best_possible[i], linestyle='--', color='gray', linewidth=1)
-            plt.text(0, best_possible[i] + 0.01, f'Target: {best_possible[i]:.4f}',
-                     fontsize=9, color='gray')
-
-        plt.legend()
-
-    plt.tight_layout()
-    plt.savefig(output_path)
-
-
-def solve(fobj, x, change_nbg, next, maxeval=50):
-        """
-        Args:
-            *change_nbg*: It is a callback function that will be call whenever a better solution is not found.
-            *next*: It is a callback function that will be call when the next possible solution need to be constructed
-        """
-                
-        num_evals = 0
-        kmax = int(np.abs(len(x.solution) / 2)) + 1
-        history = []
-
-        # Initial evaluation
-        x.single_objective_value = fobj.evaluate(x.solution)
-        num_evals += 1
-        history.append(x.single_objective_value)
-
-        best = Solution()
-        best.single_objective_value = x.single_objective_value
-        best.solution = np.array(x.solution)
-
-        while num_evals < maxeval:
-            k = 1
-            improved = False
-
-            while k <= kmax and num_evals < maxeval:
-                # Generate a neighbor by swapping k pairs
-                for _ in range(k):
-                    y = next(fobj, x)
-        
-                num_evals += 1
-
-                if y.single_objective_value > x.single_objective_value:
-                    x = copy.deepcopy(y)
-                    k = 1
-                    improved = True
-
-                    if x.single_objective_value > best.single_objective_value:
-                        best.single_objective_value = x.single_objective_value
-                        best.solution = np.array(x.solution)
-                else:
-                    k += 1
-
-                history.append(x.single_objective_value)
-
-            if not improved:
-                change_nbg(fobj, x)
-                num_evals += 1
-                history.append(x.single_objective_value)
-
-        return best, history
-
-class Solution:
-    def __init__(self):
-        self.single_objective_value = 0
-        self.solution = np.array([])
-        pass
+from .utils import plot_optimization_histories, Solution, solve
+import pandas as pd
 
 
 np.random.seed(91)
 
 
-size = 7
+size = 9
 base = Solution()
 base.solution = np.random.permutation(size)
 
@@ -148,9 +57,72 @@ def change(f, x):
     x.solution = np.random.permutation(x.solution)
     x.single_objective_value = f.evaluate(x.solution)
 
-x0, historic0 = solve(permutation, base, change_nbg=change, next=next_swap, maxeval=500)
-x1, historic1 = solve(permutation, base, change_nbg=change, next=next_swap_close, maxeval=500)
-x2, historic2 = solve(permutation, base, change_nbg=change, next=next_ivertion, maxeval=500)
+# x0, historic0 = solve(permutation, base, change_nbg=change, next=next_swap, maxeval=500)
+# x1, historic1 = solve(permutation, base, change_nbg=change, next=next_swap_close, maxeval=500)
+# x2, historic2 = solve(permutation, base, change_nbg=change, next=next_ivertion, maxeval=500)
 best = permutation.evaluate(permutation.consensus[0])
 
-plot_optimization_histories([historic0, historic1, historic2], ["SWAP", "SWAP CLOSE", "SWAP INVERTION"], [best for _ in range(3)])
+# plot_optimization_histories(
+#     [historic0, historic1, historic2], 
+#     ["SWAP", "SWAP CLOSE", "SWAP INVERTION"], 
+#     [best for _ in range(3)])
+
+
+
+def results_table(results, best):
+    # Calculate the difference from the best for each run and each method
+    diffs = np.array([[abs(x.single_objective_value - best) for x in run] for run in results])
+    avg = np.mean(diffs, axis=0)
+    std = np.std(diffs, axis=0)
+
+    # Prepare DataFrame for display, rounding to 4 decimals
+    methods = ["SWAP", "SWAP CLOSE", "SWAP INVERTION"]
+    df = pd.DataFrame({
+        "Method": methods,
+        "Avg. Dis. from Best": np.round(avg, 4),
+        "Std Dev": np.round(std, 4)
+    })
+
+    # Plot as a table with improved style
+    fig, ax = plt.subplots(figsize=(7, 2.5))
+    ax.axis('off')
+    table = ax.table(
+        cellText=df.values,
+        colLabels=df.columns,
+        loc='center',
+        cellLoc='center',
+        colColours=['#40466e']*len(df.columns),
+        cellColours=[['#f1f1f2']*len(df.columns) for _ in range(len(df))]
+    )
+    table.auto_set_font_size(False)
+    table.set_fontsize(13)
+    table.scale(1.2, 1.3)
+
+    # Style header
+    for (row, col), cell in table.get_celld().items():
+        if row == 0:
+            cell.set_text_props(weight='bold', color='white')
+            cell.set_facecolor('#40466e')
+        else:
+            cell.set_facecolor('#f1f1f2')
+            cell.set_edgecolor('#bbbbbb')
+
+    plt.tight_layout()
+    plt.savefig(f"hypothesis_{len(results)}_{len(results[0][0].solution)}.png", bbox_inches='tight', dpi=150)
+    plt.close(fig)
+
+results = []
+
+for i in range(20):
+    x0, _ = solve(permutation, base, change_nbg=change, next=next_swap, maxeval=500)
+    x1, _ = solve(permutation, base, change_nbg=change, next=next_swap_close, maxeval=500)
+    x2, _ = solve(permutation, base, change_nbg=change, next=next_ivertion, maxeval=500)
+
+    results.append([x0, x1, x2])
+
+results_table(results, best)
+
+
+
+
+
