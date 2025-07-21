@@ -99,7 +99,6 @@ def _create_instance_max(permutation_size: int, number_of_optimas: int):
 
     return Instance(consensus_permutations, solution, zeta, thetas)
 
-
 def _create_instance_min(permutation_size: int, number_of_optimas: int):
 
     consensus_permutations =  _create_permutations(permutation_size, number_of_optimas)
