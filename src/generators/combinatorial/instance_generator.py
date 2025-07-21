@@ -1,5 +1,5 @@
 import numpy as np
-from typing import Dict
+from typing import Dict, List
 import matplotlib.pyplot as plt
 import itertools
 from scipy.stats import kendalltau
@@ -9,6 +9,13 @@ from .parameters import LinearProg
 import matplotlib
 matplotlib.use('Agg')
 
+def hamming(perm1, perm2) -> int:
+        differences = 0
+        for i in range(len(perm1)):
+            if perm1[i] != perm2[i]:
+                differences += 1
+
+        return differences
 
 def _generate_difficult_thetas(permutation_size, number_of_optimas):
     small_range = (np.log(permutation_size - .5), np.log(permutation_size - .5) + 1)
@@ -64,14 +71,40 @@ def _calculate_kendall_tau_distances(permutations):
 
 def _create_permutations(permutation_size: int, number_of_optimas: int):
     consensus_permutations = []
-    for _ in range(number_of_optimas):
+    distances: Dict[int, int] = {}
+
+    elements = list(range(1, permutation_size + 1))
+    np.random.shuffle(elements)
+
+    consensus_permutations.append(elements)
+    distances[0] = 1
+
+    for i in range(permutation_size-1):
+        elements = elements.copy()
+        elements[i], elements[i+1] = elements[i+1], elements[i]
+
+        consensus_permutations.append(elements)
+
+        distance = hamming(consensus_permutations[0], elements)
+
+        distances[distance] = 1
+    
+    for _ in range(0, number_of_optimas - permutation_size, permutation_size-1):
         # Create a list of elements from 1 to permutation_size
         elements = list(range(1, permutation_size + 1))
 
         # Shuffle the list to get a random permutation
         np.random.shuffle(elements)
 
-        consensus_permutations.append(elements)
+        for i in range(permutation_size-1):
+            elements = elements.copy()
+            elements[i], elements[i+1] = elements[i+1], elements[i]
+
+            consensus_permutations.append(elements)
+
+            distance = hamming(consensus_permutations[0], elements)
+
+            distances[distance] = distances[distance] + 1
 
     return consensus_permutations
 
@@ -135,6 +168,16 @@ class Permutation:
         self.consensus = instance_parameters.consensus_permutations
         self.zetas = instance_parameters.zetas
         self.thetas = [theta[0] for theta in instance_parameters.thetas]
+        
+        self.consensus_by_distance:Dict[int, List[int]] = {}
+
+        for i in range(len(self.consensus)):
+            distance = self.hamming(self.consensus[0], self.consensus[i])
+            
+            if distance not in self.consensus_by_distance:
+                self.consensus_by_distance[distance] = []
+
+            self.consensus_by_distance[distance].append(i)
 
     def evaluate(self, perm: np.ndarray) -> float:
         value = list()
@@ -154,15 +197,45 @@ class Permutation:
 
         return np.max(value)
 
-    pass
+    def hamming(self, perm1, perm2) -> int:
+        differences = 0
+        for i in range(len(perm1)):
+            if perm1[i] != perm2[i]:
+                differences += 1
 
-    def plot(self, output_path):
+        return differences
+    
+    def bucket_evaluate(self, perm: np.ndarray) -> float:
+        value = 0
+        n = len(perm)
+        max_possible_pairs = n * (n - 1) / 2
+
+        distance = self.hamming(perm, self.consensus[0])
+
+        for i in self.consensus_by_distance[distance]:
+            tau, _ = kendalltau(self.consensus[i], perm)
+            discordant_pairs = (1 - tau) * max_possible_pairs / 2
+            distance = round(discordant_pairs)
+
+            mallows_value = np.divide(
+                np.multiply(self.weights[i], np.exp(-distance * self.thetas[i])),
+                self.zetas[i])
+            
+            if value < mallows_value:
+                value = mallows_value
+
+        return value
+
+
+    def plot(self, output_path, f = None):
         all_perms = list(itertools.permutations(range(1, self.permutation_size + 1)))
 
+        if f == None:
+            f = self.evaluate
         # Evaluate all permutations and store their values and labels
         perm_values = []
         for perm in all_perms:
-            value = self.evaluate(np.array(perm))
+            value = f(np.array(perm))
             perm_values.append((perm, value))
 
         # Sort permutations by value (descending for max)

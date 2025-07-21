@@ -14,7 +14,6 @@ def solve(fobj, x, change_nbg, next, maxeval=50):
         history = []
 
         # Initial evaluation
-        x.single_objective_value = fobj.evaluate(x.solution)
         num_evals += 1
         history.append(x.single_objective_value)
 

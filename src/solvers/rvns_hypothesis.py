@@ -4,29 +4,31 @@ import copy
 import matplotlib.pyplot as plt
 from .utils import plot_optimization_histories, Solution, solve
 import pandas as pd
+import time
 
 
 np.random.seed(91)
 
 
-size = 9
+size = 10
 base = Solution()
-base.solution = np.random.permutation(size)
-
-print(base.solution)
+base.solution = list(range(1, size + 1))
+np.random.shuffle(base.solution)
 
 permutation = Permutation(len(base.solution), len(base.solution)**2) 
 
 permutation.calc_parameters_difficult()
 
+base.single_objective_value = permutation.bucket_evaluate(base.solution)
+
 consensus = permutation.consensus[0]
-print(f"{consensus} {permutation.evaluate(consensus)}")
+print(f"{consensus} {permutation.bucket_evaluate(consensus)}")
 
 def next_swap(f, x):
     y = copy.deepcopy(x)
     idx = np.random.choice(len(x.solution), size=2, replace=False)
     y.solution[idx[0]], y.solution[idx[1]] = y.solution[idx[1]], y.solution[idx[0]]
-    y.single_objective_value = f.evaluate(y.solution)
+    y.single_objective_value = f.bucket_evaluate(y.solution)
 
     return y
 
@@ -34,7 +36,7 @@ def next_swap_close(f, x):
     y = copy.deepcopy(x)
     idx = np.random.randint(1, len(x.solution)-1)
     y.solution[idx], y.solution[idx+1] = y.solution[idx + 1], y.solution[idx]
-    y.single_objective_value = f.evaluate(y.solution)
+    y.single_objective_value = f.bucket_evaluate(y.solution)
 
     return y
 
@@ -49,13 +51,13 @@ def next_ivertion(f, x):
 
     y.solution[j], y.solution[k] = y.solution[k], y.solution[j]
 
-    y.single_objective_value = f.evaluate(y.solution)
+    y.single_objective_value = f.bucket_evaluate(y.solution)
 
     return y
 
 def change(f, x):
     x.solution = np.random.permutation(x.solution)
-    x.single_objective_value = f.evaluate(x.solution)
+    x.single_objective_value = f.bucket_evaluate(x.solution)
 
 # x0, historic0 = solve(permutation, base, change_nbg=change, next=next_swap, maxeval=500)
 # x1, historic1 = solve(permutation, base, change_nbg=change, next=next_swap_close, maxeval=500)
@@ -69,22 +71,24 @@ best = permutation.evaluate(permutation.consensus[0])
 
 
 
-def results_table(results, best):
+def results_table(results, best, times):
     # Calculate the difference from the best for each run and each method
     diffs = np.array([[abs(x.single_objective_value - best) for x in run] for run in results])
     avg = np.mean(diffs, axis=0)
     std = np.std(diffs, axis=0)
+    avg_times = np.mean(times, axis=0)
 
     # Prepare DataFrame for display, rounding to 4 decimals
     methods = ["SWAP", "SWAP CLOSE", "SWAP INVERTION"]
     df = pd.DataFrame({
         "Method": methods,
         "Avg. Dis. from Best": np.round(avg, 4),
-        "Std Dev": np.round(std, 4)
+        "Std Dev": np.round(std, 4),
+        "Avg. Time (s)": np.round(avg_times, 4)
     })
 
     # Plot as a table with improved style
-    fig, ax = plt.subplots(figsize=(7, 2.5))
+    fig, ax = plt.subplots(figsize=(9, 2.5))
     ax.axis('off')
     table = ax.table(
         cellText=df.values,
@@ -108,19 +112,25 @@ def results_table(results, best):
             cell.set_edgecolor('#bbbbbb')
 
     plt.tight_layout()
-    plt.savefig(f"hypothesis_{len(results)}_{len(results[0][0].solution)}.png", bbox_inches='tight', dpi=150)
+    plt.savefig(f"hypothesis_b_{len(results)}_{len(results[0][0].solution)}.png", bbox_inches='tight', dpi=150)
     plt.close(fig)
 
 results = []
+times = []
 
-for i in range(20):
+for i in range(10):
+    t0 = time.time()
     x0, _ = solve(permutation, base, change_nbg=change, next=next_swap, maxeval=500)
+    t1 = time.time()
     x1, _ = solve(permutation, base, change_nbg=change, next=next_swap_close, maxeval=500)
+    t2 = time.time()
     x2, _ = solve(permutation, base, change_nbg=change, next=next_ivertion, maxeval=500)
+    t3 = time.time()
 
     results.append([x0, x1, x2])
+    times.append([t1-t0, t2-t1, t3-t2])
 
-results_table(results, best)
+results_table(results, best, times)
 
 
 
