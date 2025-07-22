@@ -10,7 +10,6 @@ def solve(fobj, x, change_nbg, next, maxeval=50):
         """
                 
         num_evals = 0
-        kmax = int(np.abs(len(x.solution) / 2)) + 1
         history = []
 
         # Initial evaluation
@@ -20,70 +19,55 @@ def solve(fobj, x, change_nbg, next, maxeval=50):
         best = Solution()
         best.single_objective_value = x.single_objective_value
         best.solution = np.array(x.solution)
+        size = len(best.solution)
 
         while num_evals < maxeval:
-            k = 1
-            improved = False
-
-            while k <= kmax and num_evals < maxeval:
-                # Generate a neighbor by swapping k pairs
-                for _ in range(k):
-                    y = next(fobj, x)
+            y = next(fobj, x, size)
         
-                num_evals += 1
+            num_evals += 1
 
-                if y.single_objective_value > x.single_objective_value:
-                    x = copy.deepcopy(y)
-                    k = 1
-                    improved = True
-
-                    if x.single_objective_value > best.single_objective_value:
-                        best.single_objective_value = x.single_objective_value
-                        best.solution = np.array(x.solution)
-                else:
-                    k += 1
-
+            if y.single_objective_value > x.single_objective_value:
+                x = copy.deepcopy(y)
                 history.append(x.single_objective_value)
 
-            if not improved:
+            else:
                 change_nbg(fobj, x)
                 num_evals += 1
                 history.append(x.single_objective_value)
 
-        return best, history
+        return history
 
 def plot_optimization_histories(histories, titles=None, best_possible=None, output_path="historic.png"):
     """
-    Plot multiple optimization histories side by side using lines.
+    Plot multiple optimization histories on the same graph using lines (log scale on y-axis).
 
     Args:
         histories (list of list): Each element is a list of objective values (history).
-        titles (list of str, optional): Titles for each subplot.
+        titles (list of str, optional): Labels for each history.
         best_possible (list of float, optional): Best possible values for each history.
     """
-    n = len(histories)
-    plt.figure(figsize=(6 * n, 5))
+    plt.figure(figsize=(16, 9))
 
     for i, history in enumerate(histories):
-        plt.subplot(1, n, i + 1)
-        plt.plot(range(len(history)), history, label='Objective Value', color=f'C{i}', marker='o', markersize=4)
-        plt.xlabel('Evaluations')
-        plt.ylabel('Objective Value')
-        best_found = np.max(history)
-        title = f'Optimization {i+1}\nBest Found: {best_found:.4f}'
+        label = f'Optimization {i+1}'
         if titles and i < len(titles):
-            title = f'{titles[i]}\nBest Found: {best_found:.4f}'
-        plt.title(title, fontsize=12, fontweight='bold')
-        plt.grid(True)
+            label = titles[i]
+        plt.plot(range(len(history)), history, label=f'{label} (Best: {np.max(history):.4f})', marker='o', markersize=4)
 
-        # Target line if provided
-        if best_possible and i < len(best_possible) and best_possible[i] is not None:
-            plt.axhline(y=best_possible[i], linestyle='--', color='gray', linewidth=1)
-            plt.text(0, best_possible[i] + 0.01, f'Target: {best_possible[i]:.4f}',
-                     fontsize=9, color='gray')
+    plt.xlabel('Evaluations')
+    plt.ylabel('Objective Value (log scale)')
+    plt.yscale('log')
+    plt.title('Optimization Histories', fontsize=13, fontweight='bold')
+    plt.grid(True, which='both', axis='y')
 
-        plt.legend()
+    # Target lines if provided
+    if best_possible:
+        for i, target in enumerate(best_possible):
+            if target is not None:
+                plt.axhline(y=target, linestyle='--', color=f'C{i}', linewidth=1, alpha=0.6)
+                plt.text(0, target * 1.01, f'Target {i+1}: {target:.4f}', fontsize=9, color=f'C{i}')
 
+    plt.legend()
     plt.tight_layout()
     plt.savefig(output_path)
 
