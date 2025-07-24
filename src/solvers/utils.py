@@ -78,7 +78,6 @@ def plot_samples(samples, confidence_interval=95, title="None", output="sample.p
     plt.savefig(output)
     plt.close()
 
-
 def plot_optimization_histories(histories, titles=None, best_possible=None, output_path="historic.png"):
     """
     Plot multiple optimization histories on the same graph using lines (log scale on y-axis).
@@ -107,11 +106,12 @@ def plot_optimization_histories(histories, titles=None, best_possible=None, outp
         for i, target in enumerate(best_possible):
             if target is not None:
                 plt.axhline(y=target, linestyle='--', color=f'C{i}', linewidth=1, alpha=0.6)
-                plt.text(0, target * 1.01, f'Target {i+1}: {target:.4f}', fontsize=9, color=f'C{i}')
+                plt.text(0, target, f'Target {i+1}: {target:.4f}', fontsize=9, color=f'C{i}')
 
     plt.legend()
     plt.tight_layout()
     plt.savefig(output_path)
+    plt.close()
 
 class Solution:
     def __init__(self):

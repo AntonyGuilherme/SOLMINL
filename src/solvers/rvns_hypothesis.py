@@ -6,20 +6,6 @@ from .utils import plot_optimization_histories, Solution, solve, plot_samples
 
 np.random.seed(91)
 
-
-size = 10
-base = Solution()
-base.solution = list(range(1, size + 1))
-np.random.shuffle(base.solution)
-
-permutation = Permutation(len(base.solution), len(base.solution)) 
-
-permutation.calc_parameters_difficult()
-
-base.single_objective_value = permutation.evaluate(base.solution)
-
-consensus = permutation.consensus[0]
-
 def next_swap(f, x, n):
     y = copy.deepcopy(x)
 
@@ -73,42 +59,41 @@ def next_swap_invertion(f, x, n):
 
     return y
 
-
 def change(f, x):
     x.solution = np.random.permutation(x.solution)
     x.single_objective_value = f.evaluate(x.solution)
 
-number_of_samples = 30
-historic0, samples = solve(permutation, base, change_nbg=change, next=next_swap, maxeval=number_of_samples)
 
+for size in [5, 10, 20]:
+    for distance in ["C", "K"]:
+        base = Solution()
+        base.solution = list(range(1, size + 1))
+        np.random.shuffle(base.solution)
 
-# historic1 = solve(permutation, base, change_nbg=change, next=next_swap_close, maxeval=200)
-# historic2 = solve(permutation, base, change_nbg=change, next=next_swap_invertion, maxeval=200)
-best = permutation.evaluate(permutation.consensus[0])
-plot_samples(samples, best_possible=best)
+        permutation = Permutation(len(base.solution), len(base.solution), distance=distance) 
 
-# plot_optimization_histories(
-#     [historic0, historic1, historic2], 
-#     ["SWAP", "SWAP CLOSE", "SWAP INVERTION"], 
-#     [best for _ in range(3)])
+        permutation.calc_parameters_difficult()
 
-plot_optimization_histories(
-    [historic0], 
-    ["SWAP"], 
-    [best],
-    "swap.png")
+        base.single_objective_value = permutation.evaluate(base.solution)
 
-# plot_optimization_histories(
-#     [historic1], 
-#     ["SWAP CLOSE"], 
-#     [best],
-#     "swap_close.png")
+        consensus = permutation.consensus[0]
 
-# plot_optimization_histories(
-#     [historic2], 
-#     ["SWAP INVERTION"], 
-#     [best],
-#     "swap_invertion")
+        number_of_samples = 10
+        historic0, samples0 = solve(permutation, base, change_nbg=change, next=next_swap, maxeval=number_of_samples)
+        historic1, samples1 = solve(permutation, base, change_nbg=change, next=next_swap_close, maxeval=number_of_samples)
+        historic2, samples2 = solve(permutation, base, change_nbg=change, next=next_swap_invertion, maxeval=number_of_samples)
+        
+        best = permutation.evaluate(permutation.consensus[0])
+
+        plot_samples(samples0, best_possible=best, title="SWAP", output=f"swap_{distance}_{size}.png")
+        plot_samples(samples1, best_possible=best, title="ADJ. SWAP", output=f"adj_swap_{distance}_{size}.png")
+        plot_samples(samples2, best_possible=best, title="ADJ. INVERTION", output=f"adj_inv_{distance}_{size}.png")
+
+        plot_optimization_histories(
+             [historic0, historic1, historic2], 
+             ["SWAP", "ADJ. SWAP", "ADJ. INVERTION"], 
+             [best for _ in range(3)],
+             output_path=f"historic_{distance}_{size}.png")
 
 
 
