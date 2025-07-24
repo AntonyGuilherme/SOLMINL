@@ -2,7 +2,7 @@ from src.generators.combinatorial.instance_generator import Permutation
 import numpy as np
 import copy
 import matplotlib.pyplot as plt
-from .utils import plot_optimization_histories, Solution, solve
+from .utils import plot_optimization_histories, Solution, solve, plot_samples
 
 np.random.seed(91)
 
@@ -78,15 +78,19 @@ def change(f, x):
     x.solution = np.random.permutation(x.solution)
     x.single_objective_value = f.evaluate(x.solution)
 
-historic0 = solve(permutation, base, change_nbg=change, next=next_swap, maxeval=200)
-historic1 = solve(permutation, base, change_nbg=change, next=next_swap_close, maxeval=200)
-historic2 = solve(permutation, base, change_nbg=change, next=next_swap_invertion, maxeval=200)
-best = permutation.evaluate(permutation.consensus[0])
+number_of_samples = 30
+historic0, samples = solve(permutation, base, change_nbg=change, next=next_swap, maxeval=number_of_samples)
 
-plot_optimization_histories(
-    [historic0, historic1, historic2], 
-    ["SWAP", "SWAP CLOSE", "SWAP INVERTION"], 
-    [best for _ in range(3)])
+
+# historic1 = solve(permutation, base, change_nbg=change, next=next_swap_close, maxeval=200)
+# historic2 = solve(permutation, base, change_nbg=change, next=next_swap_invertion, maxeval=200)
+best = permutation.evaluate(permutation.consensus[0])
+plot_samples(samples, best_possible=best)
+
+# plot_optimization_histories(
+#     [historic0, historic1, historic2], 
+#     ["SWAP", "SWAP CLOSE", "SWAP INVERTION"], 
+#     [best for _ in range(3)])
 
 plot_optimization_histories(
     [historic0], 
@@ -94,17 +98,17 @@ plot_optimization_histories(
     [best],
     "swap.png")
 
-plot_optimization_histories(
-    [historic1], 
-    ["SWAP CLOSE"], 
-    [best],
-    "swap_close.png")
+# plot_optimization_histories(
+#     [historic1], 
+#     ["SWAP CLOSE"], 
+#     [best],
+#     "swap_close.png")
 
-plot_optimization_histories(
-    [historic2], 
-    ["SWAP INVERTION"], 
-    [best],
-    "swap_invertion")
+# plot_optimization_histories(
+#     [historic2], 
+#     ["SWAP INVERTION"], 
+#     [best],
+#     "swap_invertion")
 
 
 
