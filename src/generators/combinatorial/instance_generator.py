@@ -61,6 +61,35 @@ def _calculate_kendall_tau_distances(permutations):
 
         return distances
 
+def cayley(p1, p2):
+        # Convert permutations to cycles
+        n = len(p1)
+        visited = [False] * n
+        cycles = 0
+        # Map values to indices for p2
+        pos = {val: idx for idx, val in enumerate(p2)}
+        for i in range(n):
+            if not visited[i]:
+                cycles += 1
+                j = i
+                while not visited[j]:
+                    visited[j] = True
+                    j = pos[p1[j]]
+        return n - cycles
+
+def _calculate_cayley_distances(permutations):
+    """
+    Calculates the Cayley distance between the first permutation and all others.
+    Cayley distance is the minimum number of transpositions required to transform one permutation into another.
+    """
+
+    reference_permutation = permutations[0]
+    distances = []
+    for perm in permutations:
+        dist = cayley(reference_permutation, perm)
+        distances.append(dist)
+    return distances
+
 def _create_permutations(permutation_size: int, number_of_optimas: int):
     consensus_permutations = []
 
@@ -79,51 +108,52 @@ class Instance:
         self.zetas = zetas
         self.thetas = thetas
 
-def _create_instance_max(permutation_size: int, number_of_optimas: int):
+def _create_instance(permutation_size: int, number_of_optimas: int, distance: str= 'K', typ = "max"):
 
     consensus_permutations =  _create_permutations(permutation_size, number_of_optimas)
 
-    distances = _calculate_kendall_tau_distances(consensus_permutations)
+    if distance == "K":
+        distances = _calculate_kendall_tau_distances(consensus_permutations)
+    else:
+        distances = _calculate_cayley_distances(consensus_permutations)
 
     thetas = _generate_easy_thetas(permutation_size, number_of_optimas)
 
-    zeta = Zvalue.Zvalue(permutation_size, number_of_optimas, thetas, "K")
+    zeta = Zvalue.Zvalue(permutation_size, number_of_optimas, thetas, distance)
 
-    instance_parameters = LinearProg.LinearProg(permutation_size, number_of_optimas, thetas, distances, "max", zeta)
-
-    solution = np.array([instance_parameters.x[i].value for i in range(number_of_optimas)])
-
-    return Instance(consensus_permutations, solution, zeta, thetas)
-
-def _create_instance_min(permutation_size: int, number_of_optimas: int):
-
-    consensus_permutations =  _create_permutations(permutation_size, number_of_optimas)
-
-    distances = _calculate_kendall_tau_distances(consensus_permutations)
-
-    thetas = _generate_difficult_thetas(permutation_size, number_of_optimas)
-
-    zeta = Zvalue.Zvalue(permutation_size, number_of_optimas, thetas, "K")
-
-    instance_parameters = LinearProg.LinearProg(permutation_size, number_of_optimas, thetas, distances, "min", zeta)
+    instance_parameters = LinearProg.LinearProg(permutation_size, number_of_optimas, thetas, distances, typ, zeta)
 
     solution = np.array([instance_parameters.x[i].value for i in range(number_of_optimas)])
 
     return Instance(consensus_permutations, solution, zeta, thetas)
+
+def kendall(perm1, perm2) -> int:
+    n = len(perm1)
+    max_possible_pairs = n * (n - 1) / 2
+
+    tau, _ = kendalltau(perm1, perm2)
+    discordant_pairs = (1 - tau) * max_possible_pairs / 2
+    return round(discordant_pairs)
+
 
 class Permutation:
 
-    def __init__(self, permutation_size, number_of_optimas):
+    def __init__(self, permutation_size, number_of_optimas, distance="K"):
         self.permutation_size = permutation_size
         self.number_of_optimas = number_of_optimas
+        self.distance = distance
+        if distance == "K":
+            self.calc_distance = kendall
+        else:
+            self.calc_distance = cayley
         pass
 
     def calc_parameters_easy(self):
-        instance_parameters = _create_instance_max(self.permutation_size, self.number_of_optimas)
+        instance_parameters = _create_instance(self.permutation_size, self.number_of_optimas, self.distance, typ="max")
         self._extract_parameters(instance_parameters)
 
     def calc_parameters_difficult(self):
-        instance_parameters = _create_instance_min(self.permutation_size, self.number_of_optimas)
+        instance_parameters = _create_instance(self.permutation_size, self.number_of_optimas, self.distance, typ="min")
         self._extract_parameters(instance_parameters)
 
     def _extract_parameters(self, instance_parameters):
@@ -134,13 +164,9 @@ class Permutation:
 
     def evaluate(self, perm: np.ndarray) -> float:
         value = 0
-        n = len(perm)
-        max_possible_pairs = n * (n - 1) / 2
 
         for i in range(self.number_of_optimas):
-            tau, _ = kendalltau(self.consensus[i], perm)
-            discordant_pairs = (1 - tau) * max_possible_pairs / 2
-            distance = round(discordant_pairs)
+            distance = self.calc_distance(self.consensus[i], perm)
 
             mallows_value = np.divide(
                 np.multiply(self.weights[i], np.exp(-distance * self.thetas[i])),
@@ -152,10 +178,10 @@ class Permutation:
         return value
 
 
-    def plot(self, output_path, f = None):
+    def plot(self, output_path, f=None, solver_steps=None):
         all_perms = list(itertools.permutations(range(1, self.permutation_size + 1)))
 
-        if f == None:
+        if f is None:
             f = self.evaluate
         # Evaluate all permutations and store their values and labels
         perm_values = []
@@ -163,12 +189,11 @@ class Permutation:
             value = f(np.array(perm))
             perm_values.append((perm, value))
 
-        # Sort permutations by value (descending for max)
-        perm_values.sort(key=lambda x: x[1], reverse=True)
+        # Do NOT sort by value; keep in crescent permutation order
         x_vals = list(range(len(perm_values)))
         y_vals = [v for _, v in perm_values]
 
-        # Find indices of consensus permutations in the sorted list
+        # Find indices of consensus permutations in the permutation order
         consensus_indices = []
         consensus_values = []
         consensus_labels = []
@@ -183,7 +208,6 @@ class Permutation:
         # Calculate average value
         avg_value = np.mean(y_vals)
 
-        # Plotting
         plt.figure(figsize=(14, 6))
         plt.plot(x_vals, y_vals, marker='o', linestyle='-', color='skyblue', label='All Permutations')
         plt.scatter(consensus_indices, [y_vals[i] for i in consensus_indices], color='red', marker='x', s=100, label='Consensus')
@@ -194,11 +218,39 @@ class Permutation:
 
         plt.axhline(avg_value, color='green', linestyle='--', label=f'Average Value: {avg_value:.4f}')
 
+        # Plot solver steps if provided
+        if solver_steps is not None:
+            step_indices = []
+            step_values = []
+            step_labels = []
+            n = 0
+            for step in solver_steps:
+                n += 1
+                # Convert step.solution to a list of Python ints for comparison
+                step_solution = [int(x) for x in step.solution]
+                found = False
+                for idx, (perm, value) in enumerate(perm_values):
+                    if list(perm) == step_solution:
+                        step_indices.append(idx)
+                        step_values.append(step.single_objective_value)
+                        step_labels.append(str(n)+"-"+str(step_solution))
+                        found = True
+                        break
+                if not found:
+                    print(f"Warning: Solution step {step.solution} not found among permutations.")
+            if step_indices:
+                plt.scatter(step_indices, step_values, color='orange', marker='D', s=80, label='Solver Steps')
+                for idx, label, val in zip(step_indices, step_labels, step_values):
+                    plt.annotate(label, (idx, val), textcoords="offset points", xytext=(0,-15), ha='center', fontsize=8, color='orange')
+            else:
+                print("No solver steps matched any permutation.")
+
         plt.xticks([])
-        plt.xlabel("Permutation Index (sorted by value, descending)")
-        plt.ylabel("Evaluated Value")
-        plt.title("Permutation Values (Sorted, Descending) with Consensus Marked")
+        plt.xlabel("Permutation Index (lexicographic order)")
+        plt.ylabel("Evaluated Value (log scale)")
+        plt.title("Permutation Values (Lexicographic Order) with Consensus and Solver Steps")
         plt.grid(True, linestyle="--", alpha=0.5)
+        plt.yscale('log')
         plt.legend()
         plt.tight_layout()
         plt.savefig(output_path)
