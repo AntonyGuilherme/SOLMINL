@@ -140,4 +140,4 @@ plot_optimization_histories(
              best_possible=objective_function.continuos.minimas,
              output_path=f"historic.png")
 
-plot_samples(samples, output="mixed.png")
+plot_samples(samples, output="mixed.png", best_possible=objective_function.continuos.minimas)

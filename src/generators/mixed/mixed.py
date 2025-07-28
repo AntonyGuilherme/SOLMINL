@@ -16,7 +16,7 @@ class MixedFunction:
     continuos: QuadraticFunction
 
     def calculate_parameters(self):
-        self.permutation = Permutation(8, 8)
+        self.permutation = Permutation(5, 5)
         self.permutation.calc_parameters_difficult()
         
         minimas = [np.divide(self.permutation.weights[i], self.permutation.zetas[i])  for i in range(len(self.permutation.consensus))]

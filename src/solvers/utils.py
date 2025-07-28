@@ -45,7 +45,7 @@ def solve(fobj, x, change_nbg, next, maxeval=50):
         return history, samples
 
 
-def plot_samples(samples, confidence_interval=95, title="None", output="sample.png", best_possible=None):
+def plot_samples(samples, title="None", output="sample.png", best_possible=None):
     # Pad samples to the max length
     max_len = max(len(s) for s in samples)
     padded_samples = []
@@ -63,16 +63,18 @@ def plot_samples(samples, confidence_interval=95, title="None", output="sample.p
 
     sns.set(style="whitegrid")
     plt.figure(figsize=(16, 9))
-    sns.lineplot(data=df_long, x='timepoint', y='value', errorbar=("ci", confidence_interval))
+    sns.lineplot(data=df_long, x='timepoint', y='value', hue='sample', legend=False, alpha=0.7)
     plt.xlabel('Function Step')
     plt.ylabel('Objective Function Value (log scale)')
     plt.yscale('log')
-    plt.title(f'Mean and Dispersion Across Samples of {title}')
+    plt.title(f'All Samples of {title}')
 
-    # Add best possible line if provided
+    # Add best possible lines if provided as a list
     if best_possible is not None:
-        plt.axhline(y=best_possible, linestyle='--', color='red', linewidth=1.5, alpha=0.7)
-        plt.text(0, best_possible, f'Best Possible: {best_possible:.4f}', fontsize=10, color='red')
+        for i, bp in enumerate(best_possible):
+            if bp is not None:
+                plt.axhline(y=bp, linestyle='--', color=f'C{i}', linewidth=1.5, alpha=0.7)
+                plt.text(0, bp, f'Best Possible {i+1}: {bp:.4f}', fontsize=10, color=f'C{i}')
 
     plt.tight_layout()
     plt.savefig(output)
