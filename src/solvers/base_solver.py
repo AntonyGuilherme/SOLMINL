@@ -1,64 +1,143 @@
-from src.generators.combinatorial.instance_generator import Permutation
+from src.generators.mixed.mixed import MixedFunction, Solution
 import numpy as np
 import copy
-import matplotlib.pyplot as plt
-from .utils import plot_optimization_histories, Solution, solve, plot_samples
+from .utils import plot_optimization_histories, plot_samples
+
 
 np.random.seed(91)
 
-def next_swap(f, x, n):
+def next_swap(f : MixedFunction, x : Solution):
     y = copy.deepcopy(x)
+    n = len(y.permutation)
 
     for i in range(n - 1):
         for j in range(i+1, n):
-            y.solution[i], y.solution[j] = y.solution[j], y.solution[i]
-            y.single_objective_value = f.evaluate(y.solution)
+            y.permutation[i], y.permutation[j] = y.permutation[j], y.permutation[i]
+            y.value, y.c_value, y.p_value = f.evaluate(y, c_value=y.c_value)
 
-            if y.single_objective_value > x.single_objective_value:
-
+            if y.value < x.value:
                 return y
             else:
                 # undoing the change to no copy the solution again
-                y.solution[i], y.solution[j] = y.solution[j], y.solution[i]
+                y.permutation[i], y.permutation[j] = y.permutation[j], y.permutation[i]
 
     return y
 
-def change(f, x):
-    x.solution = np.random.permutation(x.solution)
-    x.single_objective_value = f.evaluate(x.solution)
+def change_permutation(x: Solution):
+    return np.random.permutation(x.permutation)
+
+def numerical_gradient(fobj: MixedFunction, x: Solution, epsilon=1e-6):
+    grad = np.zeros_like(x.continuos)
+    y = copy.deepcopy(x)
+    for i in range(len(x.continuos)):
+        x1 = x.continuos.copy()
+        x2 = x.continuos.copy()
+        x1[i] += epsilon
+        x2[i] -= epsilon
+        y.continuos = x1
+        ev_x1, _, _ = fobj.evaluate(y, p_value=y.p_value)
+        y.continuos = x2
+        ev_x2, _, _ = fobj.evaluate(y, p_value=y.p_value)
+        grad[i] = (ev_x1 - ev_x2) / (2 * epsilon)
+    return grad
+
+def continuos_step(objective: MixedFunction, x: Solution, direction = -1):
+    y = copy.deepcopy(x)
+    grad = numerical_gradient(objective, y)
+    step_size = 0.05
+    y.continuos = y.continuos + direction * step_size * grad
+    y.continuos = np.clip(y.continuos, 0.0, 1.0)
+    y.value, y.c_value, y.p_value = objective.evaluate(y, p_value=y.p_value)
+
+    return y
+
+def random_continuos_reposition(x:Solution, epslon=1e-6):
+    """
+    Generate a point in [0,1]^D that is at least `min_dist` away from `x`,
+    by adding/subtracting noise dimension-wise until the norm is sufficient.
+    """
+    D = len(x.continuos)
+    delta = np.zeros_like(x.continuos)
+
+    while np.linalg.norm(delta) < epslon:
+        direction = np.random.choice([-1, 1], size=D)
+        step = np.random.uniform(0.05, 0.2, size=D)
+        delta = direction * step
+        candidate = x.continuos + delta
+
+        # Project to [0,1]
+        candidate = np.clip(candidate, 0.0, 1.0)
+        delta = candidate - x.continuos
+
+    return candidate
 
 
+def step(objective: MixedFunction , x: Solution):
+    y = continuos_step(objective, x)
+    
+    if y.value > x.value:
+        y = continuos_step(objective, x, direction = 1)
+    
+    p = next_swap(objective, y)
+
+    return p
+
+def change(objective: MixedFunction, x: Solution):
+    x.permutation = change_permutation(x)
+    x.continuos = random_continuos_reposition(x)
+    x.value, x.c_value, x.p_value = objective.evaluate(x)
+    pass
 
 
+def solve(fobj: MixedFunction, x: Solution, maxeval=50):
+        """
+        Args:
+            *change_nbg*: It is a callback function that will be call whenever a better solution is not found.
+            *next*: It is a callback function that will be call when the next possible solution need to be constructed
+        """
+                
+        num_evals = 0
+        history = []
+        samples = [[]]
 
-for size in [10]:
-    for distance in ["C", "K"]:
-        base = Solution()
-        base.solution = list(range(1, size + 1))
-        np.random.shuffle(base.solution)
+        # Initial evaluation
+        num_evals += 1
+        history.append(x.value)
+        samples[-1].append(x.value)
 
-        permutation = Permutation(len(base.solution), 2, distance=distance) 
+        while num_evals < maxeval:
+            y = step(fobj, x)
 
-        permutation.calc_parameters_difficult()
+            if y.value < x.value:
+                x = y
+                history.append(x.value)
+                samples[-1].append(x.value)
 
-        base.single_objective_value = permutation.evaluate(base.solution)
+            else:
+                num_evals += 1
+                if num_evals >= maxeval:
+                    break
+                change(fobj, x)
+                samples.append([])
+                history.append(x.value)
+                samples[-1].append(x.value)
 
-        consensus = permutation.consensus[0]
-
-        number_of_samples = 10
-        historic0, samples0 = solve(permutation, base, change_nbg=change, next=next_swap, maxeval=number_of_samples)
-        
-        best = permutation.evaluate(permutation.consensus[0])
-
-        plot_samples(samples0, best_possible=best, title="SWAP", output=f"swap_{distance}_{size}.png")
-
-        plot_optimization_histories(
-             [historic0], 
-             ["SWAP", "ADJ. SWAP", "ADJ. INVERTION"], 
-             [best for _ in range(3)],
-             output_path=f"historic_{distance}_{size}.png")
+        return history, samples
 
 
+objective_function = MixedFunction()
+objective_function.calculate_parameters()
+x = Solution(dimension=objective_function.continuos.dimension, permutation_size=objective_function.permutation.permutation_size)
+x.value, x.c_value, x.p_value = objective_function.evaluate(x)
 
+historic, samples = solve(objective_function, x)
 
+print(objective_function.continuos.minimas)
 
+plot_optimization_histories(
+             [historic], 
+             ["QUADRATIC"],
+             best_possible=objective_function.continuos.minimas,
+             output_path=f"historic.png")
+
+plot_samples(samples, output="mixed.png")

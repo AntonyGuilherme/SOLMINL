@@ -28,7 +28,7 @@ def solve(fobj, x, change_nbg, next, maxeval=50):
         while num_evals < maxeval:
             y = next(fobj, x, size)
 
-            if y.single_objective_value > x.single_objective_value:
+            if y.single_objective_value < x.single_objective_value:
                 x = copy.deepcopy(y)
                 history.append(x.single_objective_value)
                 samples[-1].append(x.single_objective_value)
@@ -93,7 +93,7 @@ def plot_optimization_histories(histories, titles=None, best_possible=None, outp
         label = f'Optimization {i+1}'
         if titles and i < len(titles):
             label = titles[i]
-        plt.plot(range(len(history)), history, label=f'{label} (Best: {np.max(history):.4f})', marker='o', markersize=4)
+        plt.plot(range(len(history)), history, label=f'{label} (Best: {np.min(history):.4f})', marker='o', markersize=4)
 
     plt.xlabel('Evaluations')
     plt.ylabel('Objective Value (log scale)')

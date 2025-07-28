@@ -3,14 +3,17 @@ import sys
 
 class QuadraticFunction:
 
-    def __init__(self, dimension: int = 2, numberOfLocalMinima: int = 10):
+    def __init__(self, dimension: int = 2, numberOfLocalMinima: int = 10, minimas = None):
         self.dimension = dimension
         self.numberOfLocalMinima = numberOfLocalMinima
 
         self.p_list = [np.random.rand(dimension) for _ in range(numberOfLocalMinima)]
         self.B_inv_list = [np.linalg.inv(self.generate_positive_definite_matrix(dimension)) for _ in range(numberOfLocalMinima)]
-        self.minimas = [np.random.rand() for _ in range(self.numberOfLocalMinima)]
-
+        
+        if minimas == None:
+            self.minimas = [np.random.rand() for _ in range(self.numberOfLocalMinima)]
+        else:
+            self.minimas = minimas
         pass
 
     # Generate symmetric positive definite matrices B_i

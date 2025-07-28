@@ -1,20 +1,9 @@
 from src.generators.continuos.instance_generator import QuadraticFunction
-from src.generators.continuos.visualize import Visualize
 from .utils import Solution, solve, plot_optimization_histories, plot_samples
-
-
-quadratic = QuadraticFunction()
-visualizer = Visualize(quadratic.evaluate, quadratic.p_list)
-
-
-visualizer.spacial("teste.png")
-
 import numpy as np
 import copy
-import matplotlib.pyplot as plt
 
 np.random.seed(78)
-
 
 def numerical_gradient(fobj, x_vec, epsilon=1e-6):
     grad = np.zeros_like(x_vec)
@@ -59,7 +48,7 @@ def random_continuos_reposition(f, x, epslon=1e-6):
     x.single_objective_value = f.evaluate(x.solution)
 
 
-objective = QuadraticFunction(numberOfLocalMinima=1)
+objective = QuadraticFunction(numberOfLocalMinima=4)
 
 base = Solution()
 base.solution = np.zeros(objective.dimension)
@@ -71,7 +60,7 @@ print(objective.minimas)
 plot_optimization_histories(
              [historic], 
              ["QUADRATIC"],
-             best_possible=objective.minimas,
+             best_possible=[min(objective.minimas)],
              output_path=f"historic_q.png")
 
 plot_samples(samples)

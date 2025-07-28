@@ -117,7 +117,10 @@ def _create_instance(permutation_size: int, number_of_optimas: int, distance: st
     else:
         distances = _calculate_cayley_distances(consensus_permutations)
 
-    thetas = _generate_easy_thetas(permutation_size, number_of_optimas)
+    if typ == "max":
+        thetas = _generate_easy_thetas(permutation_size, number_of_optimas)
+    else:
+        thetas = _generate_difficult_thetas(permutation_size, number_of_optimas)
 
     zeta = Zvalue.Zvalue(permutation_size, number_of_optimas, thetas, distance)
 
