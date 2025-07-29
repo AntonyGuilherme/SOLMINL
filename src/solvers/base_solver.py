@@ -43,11 +43,15 @@ def numerical_gradient(fobj: MixedFunction, x: Solution, epsilon=1e-6):
 
 def continuos_step(objective: MixedFunction, x: Solution, direction = -1):
     y = copy.deepcopy(x)
-    grad = numerical_gradient(objective, y)
-    step_size = 0.05
-    y.continuos = y.continuos + direction * step_size * grad
-    y.continuos = np.clip(y.continuos, 0.0, 1.0)
-    y.value, y.c_value, y.p_value = objective.evaluate(y, p_value=y.p_value)
+    steps = 20
+    i = 0
+    while y.value <= x.value and steps > i:
+        i += 1
+        grad = numerical_gradient(objective, y)
+        step_size = 0.05
+        y.continuos = y.continuos + direction * step_size * grad
+        y.continuos = np.clip(y.continuos, 0.0, 1.0)
+        y.value, y.c_value, y.p_value = objective.evaluate(y, p_value=y.p_value)
 
     return y
 
@@ -73,10 +77,8 @@ def random_continuos_reposition(x:Solution, epslon=1e-6):
 
 
 def step(objective: MixedFunction , x: Solution):
+    # solve until rech a local minimum
     y = continuos_step(objective, x)
-    
-    # if y.value > x.value:
-    #     y = continuos_step(objective, x, direction = 1)
     
     p = next_swap(objective, y)
 
@@ -136,11 +138,11 @@ def solve(fobj: MixedFunction, x: Solution, maxeval=50):
 
 
 objective_function = MixedFunction()
-objective_function.calculate_parameters(continuos_dimension=2, permutation_size=5, number_of_minimas=5)
+objective_function.calculate_parameters(continuos_dimension=6, permutation_size=8, number_of_minimas=16)
 x = Solution(dimension=objective_function.continuos.dimension, permutation_size=objective_function.permutation.permutation_size)
 x.value, x.c_value, x.p_value = objective_function.evaluate(x)
 
-historic, samples, samples_p, samples_q = solve(objective_function, x, maxeval=5)
+historic, samples, samples_p, samples_q = solve(objective_function, x, maxeval=30)
 
 plot_optimization_histories(
              [historic], 
