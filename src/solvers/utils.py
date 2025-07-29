@@ -3,6 +3,7 @@ import copy
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
+from scipy.stats import t
 
 def solve(fobj, x, change_nbg, next, maxeval=50):
         """
@@ -44,6 +45,59 @@ def solve(fobj, x, change_nbg, next, maxeval=50):
 
         return history, samples
 
+def plot_samples_with_ci(samples_list, title="None", subtitle = [],  output="sample_ci.png", best_possible=None, ci=95):
+    """
+    Plot the average and confidence interval of multiple sets of samples using seaborn.
+
+    Args:
+        samples_list (list of list of lists): Each element is a list of samples (each sample is a list of values).
+        title (str): Plot title.
+        output (str): Output file path.
+        best_possible (list of float, optional): Best possible values for each group.
+        ci (float): Confidence interval percentage (default 95).
+    """
+    plt.figure(figsize=(16, 9))
+    sns.set(style="whitegrid")
+
+    all_df = []
+    for idx, samples in enumerate(samples_list):
+        max_len = max(len(s) for s in samples)
+        for sample_id, s in enumerate(samples):
+            pad_size = max_len - len(s)
+            if pad_size > 0:
+                s = np.concatenate([s, np.full(pad_size, np.nan)])
+            df = pd.DataFrame({
+                "step": np.arange(max_len),
+                "value": s,
+                "group": subtitle[idx]
+            })
+            all_df.append(df)
+    df_long = pd.concat(all_df, ignore_index=True)
+
+    sns.lineplot(
+        data=df_long,
+        x="step",
+        y="value",
+        hue="group",
+        errorbar=("ci", ci),
+        estimator="mean",
+        err_style="band"
+    )
+
+    plt.xlabel('Function Step')
+    plt.ylabel('Objective Function Value (log scale)')
+    plt.yscale('log')
+    plt.title(f'Average Samples with {ci}% CI: {title}')
+
+    if best_possible is not None:
+        for i, bp in enumerate(best_possible):
+            if bp is not None:
+                plt.axhline(y=bp, linestyle='--', color=f'C{i}', linewidth=1.5, alpha=0.7)
+                plt.text(0, bp, f'Best Possible {i+1}: {bp:.4f}', fontsize=10, color=f'C{i}')
+
+    plt.tight_layout()
+    plt.savefig(output)
+    plt.close()
 
 def plot_samples(samples, title="None", output="sample.png", best_possible=None):
     # Pad samples to the max length

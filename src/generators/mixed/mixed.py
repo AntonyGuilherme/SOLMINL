@@ -15,12 +15,12 @@ class MixedFunction:
     permutation: Permutation
     continuos: QuadraticFunction
 
-    def calculate_parameters(self):
-        self.permutation = Permutation(5, 5)
+    def calculate_parameters(self, continuos_dimension = 2, permutation_size = 5, number_of_minimas = 5):
+        self.permutation = Permutation(permutation_size, number_of_minimas)
         self.permutation.calc_parameters_difficult()
         
         minimas = [np.divide(self.permutation.weights[i], self.permutation.zetas[i])  for i in range(len(self.permutation.consensus))]
-        self.continuos = QuadraticFunction(numberOfLocalMinima=len(minimas), minimas=minimas)
+        self.continuos = QuadraticFunction(dimension=continuos_dimension, numberOfLocalMinima=len(minimas), minimas=minimas)
 
     def evaluate(self, x: Solution, c_value = None, p_value = None):
         if p_value is None:

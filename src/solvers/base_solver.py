@@ -1,7 +1,7 @@
 from src.generators.mixed.mixed import MixedFunction, Solution
 import numpy as np
 import copy
-from .utils import plot_optimization_histories, plot_samples
+from .utils import plot_optimization_histories, plot_samples, plot_samples_with_ci
 
 
 np.random.seed(91)
@@ -75,8 +75,8 @@ def random_continuos_reposition(x:Solution, epslon=1e-6):
 def step(objective: MixedFunction , x: Solution):
     y = continuos_step(objective, x)
     
-    if y.value > x.value:
-        y = continuos_step(objective, x, direction = 1)
+    # if y.value > x.value:
+    #     y = continuos_step(objective, x, direction = 1)
     
     p = next_swap(objective, y)
 
@@ -99,40 +99,48 @@ def solve(fobj: MixedFunction, x: Solution, maxeval=50):
         num_evals = 0
         history = []
         samples = [[]]
+        samples_q = [[]]
+        samples_p = [[]]
 
         # Initial evaluation
         num_evals += 1
         history.append(x.value)
         samples[-1].append(x.value)
+        samples_q[-1].append(x.c_value)
+        samples_p[-1].append(x.p_value)
 
-        while num_evals < maxeval:
+        while num_evals <= maxeval:
             y = step(fobj, x)
 
             if y.value < x.value:
                 x = y
                 history.append(x.value)
                 samples[-1].append(x.value)
+                samples_q[-1].append(x.c_value)
+                samples_p[-1].append(x.p_value)
 
             else:
                 num_evals += 1
-                if num_evals >= maxeval:
+                if num_evals > maxeval:
                     break
                 change(fobj, x)
                 samples.append([])
+                samples_q.append([])
+                samples_p.append([])
                 history.append(x.value)
                 samples[-1].append(x.value)
+                samples_q[-1].append(x.c_value)
+                samples_p[-1].append(x.p_value)
 
-        return history, samples
+        return history, samples, samples_p, samples_q
 
 
 objective_function = MixedFunction()
-objective_function.calculate_parameters()
+objective_function.calculate_parameters(continuos_dimension=2, permutation_size=5, number_of_minimas=5)
 x = Solution(dimension=objective_function.continuos.dimension, permutation_size=objective_function.permutation.permutation_size)
 x.value, x.c_value, x.p_value = objective_function.evaluate(x)
 
-historic, samples = solve(objective_function, x)
-
-print(objective_function.continuos.minimas)
+historic, samples, samples_p, samples_q = solve(objective_function, x, maxeval=5)
 
 plot_optimization_histories(
              [historic], 
@@ -141,3 +149,5 @@ plot_optimization_histories(
              output_path=f"historic.png")
 
 plot_samples(samples, output="mixed.png", best_possible=objective_function.continuos.minimas)
+
+plot_samples_with_ci([samples_q, samples_p], "Quadratic and Permutation Evolution", subtitle = ["Permutation", "Quadratic"])
