@@ -164,6 +164,7 @@ class Permutation:
         self.consensus = instance_parameters.consensus_permutations
         self.zetas = instance_parameters.zetas
         self.thetas = [theta[0] for theta in instance_parameters.thetas]
+        self.maximum = np.max([np.divide(self.weights[i], self.zetas[i]) for i in range(len(self.weights))])
 
     def evaluate(self, perm: np.ndarray) -> float:
         value = 0
@@ -179,6 +180,23 @@ class Permutation:
                 value = mallows_value
 
         return value
+    
+    def evaluate_and_get_index(self, perm: np.ndarray):
+        value = 0
+        k = 0
+
+        for i in range(self.number_of_optimas):
+            distance = self.calc_distance(self.consensus[i], perm)
+
+            mallows_value = np.divide(
+                np.multiply(self.weights[i], np.exp(-distance * self.thetas[i])),
+                self.zetas[i])
+            
+            if value < mallows_value:
+                value = mallows_value
+                k = i
+
+        return np.subtract(1, np.divide(value, self.maximum)), k
 
 
     def plot(self, output_path, f=None, solver_steps=None):

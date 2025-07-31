@@ -86,7 +86,7 @@ def plot_samples_with_ci(samples_list, title="None", subtitle = [],  output="sam
 
     plt.xlabel('Function Step')
     plt.ylabel('Objective Function Value (log scale)')
-    plt.yscale('log')
+    #plt.yscale('log')
     plt.title(f'Average Samples with {ci}% CI: {title}')
 
     if best_possible is not None:
@@ -120,7 +120,7 @@ def plot_samples(samples, title="None", output="sample.png", best_possible=None)
     sns.lineplot(data=df_long, x='timepoint', y='value', hue='sample', legend=False, alpha=0.7)
     plt.xlabel('Function Step')
     plt.ylabel('Objective Function Value (log scale)')
-    plt.yscale('log')
+    #plt.yscale('log')
     plt.title(f'All Samples of {title}')
 
     # Add best possible lines if provided as a list
@@ -153,7 +153,7 @@ def plot_optimization_histories(histories, titles=None, best_possible=None, outp
 
     plt.xlabel('Evaluations')
     plt.ylabel('Objective Value (log scale)')
-    plt.yscale('log')
+    #plt.yscale('log')
     plt.title('Optimization Histories', fontsize=13, fontweight='bold')
     plt.grid(True, which='both', axis='y')
 

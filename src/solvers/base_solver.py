@@ -1,4 +1,4 @@
-from src.generators.mixed.mixed import MixedFunction, Solution
+from src.generators.mixed.mixed import MixedFunction, Solution, QuadraticLandscapeByMallows
 import numpy as np
 import copy
 from .utils import plot_optimization_histories, plot_samples, plot_samples_with_ci
@@ -134,22 +134,30 @@ def solve(fobj: MixedFunction, x: Solution, maxeval=50):
                 samples_q[-1].append(x.c_value)
                 samples_p[-1].append(x.p_value)
 
+                percent_complete = (num_evals / maxeval) * 100
+                print(f"\nProgress: {percent_complete:.1f}% complete")
+
         return history, samples, samples_p, samples_q
 
 
-objective_function = MixedFunction()
-objective_function.calculate_parameters(continuos_dimension=6, permutation_size=8, number_of_minimas=16)
-x = Solution(dimension=objective_function.continuos.dimension, permutation_size=objective_function.permutation.permutation_size)
+dimension = 3
+permutation_size = 10
+number_of_minima = 10
+objective_function = QuadraticLandscapeByMallows()
+objective_function.calculate_parameters(continuos_dimension=dimension, permutation_size=permutation_size, number_of_minimas=number_of_minima)
+x = Solution(dimension=dimension, permutation_size=permutation_size)
 x.value, x.c_value, x.p_value = objective_function.evaluate(x)
 
-historic, samples, samples_p, samples_q = solve(objective_function, x, maxeval=30)
+historic, samples, samples_p, samples_q = solve(objective_function, x, maxeval=15)
+
+print(objective_function.minimas)
 
 plot_optimization_histories(
              [historic], 
              ["QUADRATIC"],
-             best_possible=objective_function.continuos.minimas,
+             best_possible=objective_function.minimas,
              output_path=f"historic.png")
 
-plot_samples(samples, output="mixed.png", best_possible=objective_function.continuos.minimas)
+plot_samples(samples, output="mixed.png", best_possible=objective_function.minimas)
 
-plot_samples_with_ci([samples_q, samples_p], "Quadratic and Permutation Evolution", subtitle = ["Permutation", "Quadratic"])
+plot_samples_with_ci([samples_p, samples_q], "Quadratic and Permutation Evolution", subtitle = ["Permutation", "Quadratic"])
