@@ -2,6 +2,7 @@ from src.generators.mixed.mixed import MixedFunction, Solution, QuadraticLandsca
 import numpy as np
 import copy
 from .utils import plot_optimization_histories, plot_samples, plot_samples_with_ci
+import os
 
 
 np.random.seed(91)
@@ -140,24 +141,45 @@ def solve(fobj: MixedFunction, x: Solution, maxeval=50):
         return history, samples, samples_p, samples_q
 
 
-dimension = 3
-permutation_size = 10
-number_of_minima = 10
-objective_function = QuadraticLandscapeByMallows()
-objective_function.calculate_parameters(continuos_dimension=dimension, permutation_size=permutation_size, number_of_minimas=number_of_minima)
-x = Solution(dimension=dimension, permutation_size=permutation_size)
-x.value, x.c_value, x.p_value = objective_function.evaluate(x)
+dimensions = [3, 5]
+sizes = [8, 11]
+objectives = [MixedFunction(),  
+              QuadraticLandscapeByMallows()]
 
-historic, samples, samples_p, samples_q = solve(objective_function, x, maxeval=15)
+for dimension in dimensions:
+    for permutation_size in sizes:
+            for objective_function in objectives:
+                objective_function.calculate_parameters(continuos_dimension=dimension, permutation_size=permutation_size, number_of_minimas=permutation_size)
+                x = Solution(dimension=dimension, permutation_size=permutation_size)
+                x.value, x.c_value, x.p_value = objective_function.evaluate(x)
 
-print(objective_function.minimas)
+                historic, samples, samples_p, samples_q = solve(objective_function, x, maxeval=15)
 
-plot_optimization_histories(
-             [historic], 
-             ["QUADRATIC"],
-             best_possible=objective_function.minimas,
-             output_path=f"historic.png")
+                print(objective_function.minimas)
 
-plot_samples(samples, output="mixed.png", best_possible=objective_function.minimas)
+                # Create a folder for the current configuration
+                folder_name = f"{objective_function.name}_{dimension}_{permutation_size}"
+                os.makedirs(folder_name, exist_ok=True)
 
-plot_samples_with_ci([samples_p, samples_q], "Quadratic and Permutation Evolution", subtitle = ["Permutation", "Quadratic"])
+                plot_optimization_histories(
+                    [historic], 
+                    ["QUADRATIC"],
+                    best_possible=objective_function.minimas,
+                    output_path=os.path.join(folder_name, f"historic_{objective_function.name}_{dimension}_{permutation_size}.png"),
+                    log=objective_function.log
+                )
+
+                plot_samples(
+                    samples, 
+                    output=os.path.join(folder_name, f"samples_{objective_function.name}_{dimension}_{permutation_size}.png"), 
+                    best_possible=objective_function.minimas,
+                    log=objective_function.log
+                )
+
+                plot_samples_with_ci(
+                    [samples_p, samples_q], 
+                    "Quadratic and Permutation Evolution", 
+                    subtitle=["Permutation", "Quadratic"],
+                    log=objective_function.log,
+                    output=os.path.join(folder_name, f"ie_{objective_function.name}_{dimension}_{permutation_size}.png")
+                )

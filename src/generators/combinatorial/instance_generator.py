@@ -5,6 +5,7 @@ import itertools
 from scipy.stats import kendalltau
 from .parameters import Zvalue
 from .parameters import LinearProg
+import copy
 
 import matplotlib
 matplotlib.use('Agg')
@@ -108,9 +109,13 @@ class Instance:
         self.zetas = zetas
         self.thetas = thetas
 
-def _create_instance(permutation_size: int, number_of_optimas: int, distance: str= 'K', typ = "max"):
+def _create_instance(permutation_size: int, number_of_optimas: int, distance: str= 'K', typ = "max", permutations = None):
 
-    consensus_permutations =  _create_permutations(permutation_size, number_of_optimas)
+    if permutations is None:
+        consensus_permutations =  _create_permutations(permutation_size, number_of_optimas)
+    else:
+        consensus_permutations = copy.deepcopy(permutations)
+        np.random.shuffle(consensus_permutations)
 
     if distance == "K":
         distances = _calculate_kendall_tau_distances(consensus_permutations)
@@ -151,12 +156,12 @@ class Permutation:
             self.calc_distance = cayley
         pass
 
-    def calc_parameters_easy(self):
-        instance_parameters = _create_instance(self.permutation_size, self.number_of_optimas, self.distance, typ="max")
+    def calc_parameters_easy(self, permutations = None):
+        instance_parameters = _create_instance(self.permutation_size, self.number_of_optimas, self.distance, typ="max", permutations = permutations)
         self._extract_parameters(instance_parameters)
 
-    def calc_parameters_difficult(self):
-        instance_parameters = _create_instance(self.permutation_size, self.number_of_optimas, self.distance, typ="min")
+    def calc_parameters_difficult(self, permutations = None):
+        instance_parameters = _create_instance(self.permutation_size, self.number_of_optimas, self.distance, typ="min", permutations = permutations)
         self._extract_parameters(instance_parameters)
 
     def _extract_parameters(self, instance_parameters):

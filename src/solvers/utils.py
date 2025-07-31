@@ -45,7 +45,7 @@ def solve(fobj, x, change_nbg, next, maxeval=50):
 
         return history, samples
 
-def plot_samples_with_ci(samples_list, title="None", subtitle = [],  output="sample_ci.png", best_possible=None, ci=95):
+def plot_samples_with_ci(samples_list, title="None", subtitle = [],  output="sample_ci.png", best_possible=None, ci=95, log = False):
     """
     Plot the average and confidence interval of multiple sets of samples using seaborn.
 
@@ -86,7 +86,8 @@ def plot_samples_with_ci(samples_list, title="None", subtitle = [],  output="sam
 
     plt.xlabel('Function Step')
     plt.ylabel('Objective Function Value (log scale)')
-    #plt.yscale('log')
+    if log:
+        plt.yscale('log')
     plt.title(f'Average Samples with {ci}% CI: {title}')
 
     if best_possible is not None:
@@ -99,7 +100,7 @@ def plot_samples_with_ci(samples_list, title="None", subtitle = [],  output="sam
     plt.savefig(output)
     plt.close()
 
-def plot_samples(samples, title="None", output="sample.png", best_possible=None):
+def plot_samples(samples, title="None", output="sample.png", best_possible=None, log = False):
     # Pad samples to the max length
     max_len = max(len(s) for s in samples)
     padded_samples = []
@@ -120,7 +121,8 @@ def plot_samples(samples, title="None", output="sample.png", best_possible=None)
     sns.lineplot(data=df_long, x='timepoint', y='value', hue='sample', legend=False, alpha=0.7)
     plt.xlabel('Function Step')
     plt.ylabel('Objective Function Value (log scale)')
-    #plt.yscale('log')
+    if log:
+        plt.yscale('log')
     plt.title(f'All Samples of {title}')
 
     # Add best possible lines if provided as a list
@@ -134,7 +136,7 @@ def plot_samples(samples, title="None", output="sample.png", best_possible=None)
     plt.savefig(output)
     plt.close()
 
-def plot_optimization_histories(histories, titles=None, best_possible=None, output_path="historic.png"):
+def plot_optimization_histories(histories, titles=None, best_possible=None, output_path="historic.png", log = False):
     """
     Plot multiple optimization histories on the same graph using lines (log scale on y-axis).
 
@@ -153,7 +155,8 @@ def plot_optimization_histories(histories, titles=None, best_possible=None, outp
 
     plt.xlabel('Evaluations')
     plt.ylabel('Objective Value (log scale)')
-    #plt.yscale('log')
+    if log:
+        plt.yscale('log')
     plt.title('Optimization Histories', fontsize=13, fontweight='bold')
     plt.grid(True, which='both', axis='y')
 
