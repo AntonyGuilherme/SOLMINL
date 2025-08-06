@@ -6,3 +6,4 @@ src/generators/combinatorial/tests/data_generators/generateCOP.R
 src/generators/combinatorial/tests/data_generators/LinearProg.R
 src/generators/combinatorial/tests/data_generators/Zvalue.R
 *.png
+*.txt
