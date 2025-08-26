@@ -11,7 +11,7 @@ class QuadraticFunction:
         self.B_inv_list = [np.linalg.inv(self.generate_positive_definite_matrix(dimension)) for _ in range(numberOfLocalMinima)]
         
         if minimas == None:
-            self.minimas = [np.random.rand() for _ in range(self.numberOfLocalMinima)]
+            self.minimas = [np.multiply(2, np.random.rand()) for _ in range(self.numberOfLocalMinima)]
         else:
             self.minimas = minimas
         pass

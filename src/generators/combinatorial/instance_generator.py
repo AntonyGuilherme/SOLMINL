@@ -201,7 +201,7 @@ class Permutation:
                 value = mallows_value
                 k = i
 
-        return np.subtract(1, np.divide(value, self.maximum)), k
+        return value, k
 
 
     def plot(self, output_path, f=None, solver_steps=None):
@@ -280,3 +280,22 @@ class Permutation:
         plt.legend()
         plt.tight_layout()
         plt.savefig(output_path)
+
+
+class ZetaPermutation:
+    permutation: Permutation
+
+    def caculate_parameters(self, permutation_size, number_of_minimas, distance = "K"):
+        self.permutation = Permutation(permutation_size, number_of_minimas, distance)
+        self.permutation.calc_parameters_easy()
+    
+    def evaluate(self, perm: np.ndarray) -> float:
+        value_normalized = np.divide(self.permutation.evaluate(perm), self.permutation.maximum)
+
+        return np.subtract(2, value_normalized)
+    
+    def evaluate_and_get_index(self, perm: np.ndarray):
+        value, i = self.permutation.evaluate_and_get_index(perm)
+        value_normalized = np.divide(value, self.permutation.maximum)
+
+        return np.subtract(2, value_normalized), i

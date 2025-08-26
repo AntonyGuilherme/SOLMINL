@@ -1,4 +1,4 @@
-from src.generators.combinatorial.instance_generator import Permutation
+from src.generators.combinatorial.instance_generator import Permutation, ZetaPermutation
 from src.generators.continuos.instance_generator import QuadraticFunction
 import numpy as np
 from typing import Dict, List
@@ -11,6 +11,35 @@ class Solution:
         self.c_value = 0.0
         self.p_value = 0.0
         pass
+
+class MixIndependentFunction:
+    permutation: ZetaPermutation
+    continuos: QuadraticFunction
+    name = "mif"
+    log = True
+
+    def calculate_parameters(self, continuos_dimension = 2, permutation_size = 5, continuos_minima = 2, permutation_minima = 2, number_of_minimas = 5, distance = "K"):
+        self.permutation = ZetaPermutation()
+        self.permutation.caculate_parameters(permutation_size, permutation_minima, distance)
+        
+        permutation_minima = [self.permutation.evaluate(consensus)  for consensus in self.permutation.permutation.consensus]
+        self.continuos = QuadraticFunction(dimension=continuos_dimension, numberOfLocalMinima= continuos_minima)
+
+        self.minimas = []
+
+        for minimum_i in permutation_minima:
+            for minimum_j in self.continuos.minimas:
+                self.minimas.append(np.multiply(minimum_i, minimum_j))
+
+    def evaluate(self, x: Solution, c_value = None, p_value = None):
+        if p_value is None:
+            p_value = self.permutation.evaluate(x.permutation)
+        
+        if c_value is None:
+            c_value = self.continuos.evaluate(x.continuos)
+
+        return c_value * p_value, c_value, p_value
+
 
 class MixedFunction:
     permutation: Permutation
@@ -44,7 +73,7 @@ class QuadraticLandscapeByMallows:
 
     def calculate_parameters(self, continuos_dimension = 2, permutation_size = 5, number_of_minimas = 5, distance = "K"):
         self.permutation = Permutation(permutation_size, number_of_minimas, distance)
-        self.permutation.calc_parameters_easy()
+        self.permutation.calc_parameters_difficult()
 
         self.continuos = {}
         self.minimas = []

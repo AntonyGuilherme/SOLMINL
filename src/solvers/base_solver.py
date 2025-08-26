@@ -1,4 +1,4 @@
-from src.generators.mixed.mixed import MixedFunction, Solution, QuadraticLandscapeByMallows
+from src.generators.mixed.mixed import MixedFunction, Solution, MixIndependentFunction
 import numpy as np
 import copy
 from .utils import plot_optimization_histories, plot_samples, plot_samples_with_ci
@@ -36,7 +36,7 @@ def next_swap_invertion(f: MixedFunction, x: Solution):
         y.permutation[j], y.permutation[k] = y.permutation[k], y.permutation[j]
         y.value, y.c_value, y.p_value = f.evaluate(y, c_value=y.c_value)
 
-        if y.value > x.value:
+        if y.value < x.value:
             return y
         else:
             # undoing the change to no copy the solution again
@@ -182,27 +182,33 @@ def solve(fobj: MixedFunction, x: Solution, next, maxeval=50):
         return history, samples, samples_p, samples_q
 
 
-dimensions = [3]
-sizes = [5]
+dimensions = [5]
+sizes = [10]
 distances = ["C"]
 nexts = [next_swap, next_swap_close, next_swap_invertion]
-objectives = [MixedFunction()]
+objectives = [MixIndependentFunction()]
+number_of_evaluations_for_each_experiment = 30
+number_of_continuos_minima = 2
+number_of_permutation_minima = 2
 
 for dimension in dimensions:
     for permutation_size in sizes:
             for distance in distances:
                 for next in nexts:
                     for objective_function in objectives:
-                        objective_function.calculate_parameters(continuos_dimension=dimension, permutation_size=permutation_size, number_of_minimas=permutation_size)
+                        objective_function.calculate_parameters(continuos_dimension=dimension, 
+                                                                permutation_size=permutation_size, 
+                                                                continuos_minima=number_of_continuos_minima, 
+                                                                permutation_minima=number_of_permutation_minima)
                         x = Solution(dimension=dimension, permutation_size=permutation_size)
                         x.value, x.c_value, x.p_value = objective_function.evaluate(x)
 
-                        historic, samples, samples_p, samples_q = solve(objective_function, x, next=next, maxeval=50)
+                        historic, samples, samples_p, samples_q = solve(objective_function, x, next=next, maxeval=number_of_evaluations_for_each_experiment)
 
                         print(objective_function.minimas)
 
                         # Create a folder for the current configuration
-                        folder_name = f"{objective_function.name}_{dimension}_{permutation_size}_{next}"
+                        folder_name = f"{objective_function.name}_{dimension}_{permutation_size}_{next.__name__}"
                         os.makedirs(folder_name, exist_ok=True)
 
                         plot_optimization_histories(
