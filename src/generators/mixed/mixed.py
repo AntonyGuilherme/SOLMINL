@@ -18,7 +18,8 @@ class MixIndependentFunction:
     name = "mif"
     log = True
 
-    def calculate_parameters(self, continuos_dimension = 2, permutation_size = 5, continuos_minima = 2, permutation_minima = 2, number_of_minimas = 5, distance = "K"):
+    def calculate_parameters(self, continuos_dimension = 2, permutation_size = 5, continuos_minima = 2, permutation_minima = 2, distance = "K"):
+        print({continuos_dimension, continuos_minima, permutation_size, permutation_minima, distance})
         self.permutation = ZetaPermutation()
         self.permutation.caculate_parameters(permutation_size, permutation_minima, distance)
         
@@ -27,8 +28,9 @@ class MixIndependentFunction:
 
         self.minimas = []
 
-        for minimum_i in permutation_minima:
-            for minimum_j in self.continuos.minimas:
+        for i, minimum_i in enumerate(permutation_minima):
+            for j , minimum_j in enumerate(self.continuos.minimas):
+                print([self.continuos.p_list[j], self.permutation.permutation.consensus[i], np.multiply(minimum_i, minimum_j)])
                 self.minimas.append(np.multiply(minimum_i, minimum_j))
 
     def evaluate(self, x: Solution, c_value = None, p_value = None):

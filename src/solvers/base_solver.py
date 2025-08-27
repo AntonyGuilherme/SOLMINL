@@ -47,7 +47,6 @@ def next_swap_invertion(f: MixedFunction, x: Solution):
 
     return y
 
-
 def next_swap(f : MixedFunction, x : Solution):
     y = copy.deepcopy(x)
     n = len(y.permutation)
@@ -156,12 +155,13 @@ def solve(fobj: MixedFunction, x: Solution, next, maxeval=50):
         while num_evals <= maxeval:
             y = step(fobj, x, next)
 
-            if y.value < x.value:
+            if y.value <= np.multiply(x.value, 0.999):
                 x = y
                 history.append(x.value)
                 samples[-1].append(x.value)
                 samples_q[-1].append(x.c_value)
                 samples_p[-1].append(x.p_value)
+                print([num_evals,x.continuos, x.permutation, x.c_value, x.p_value, x.value])
 
             else:
                 num_evals += 1
@@ -176,18 +176,15 @@ def solve(fobj: MixedFunction, x: Solution, next, maxeval=50):
                 samples_q[-1].append(x.c_value)
                 samples_p[-1].append(x.p_value)
 
-                percent_complete = (num_evals / maxeval) * 100
-                print(f"\nProgress: {percent_complete:.1f}% complete")
-
         return history, samples, samples_p, samples_q
 
 
-dimensions = [5]
-sizes = [10]
-distances = ["C"]
+dimensions = [2]
+sizes = [5]
+distances = ["K"]
 nexts = [next_swap, next_swap_close, next_swap_invertion]
 objectives = [MixIndependentFunction()]
-number_of_evaluations_for_each_experiment = 30
+number_of_evaluations_for_each_experiment = 3
 number_of_continuos_minima = 2
 number_of_permutation_minima = 2
 
@@ -199,13 +196,13 @@ for dimension in dimensions:
                         objective_function.calculate_parameters(continuos_dimension=dimension, 
                                                                 permutation_size=permutation_size, 
                                                                 continuos_minima=number_of_continuos_minima, 
-                                                                permutation_minima=number_of_permutation_minima)
+                                                                permutation_minima=number_of_permutation_minima,
+                                                                distance=distance)
+                        
                         x = Solution(dimension=dimension, permutation_size=permutation_size)
                         x.value, x.c_value, x.p_value = objective_function.evaluate(x)
 
                         historic, samples, samples_p, samples_q = solve(objective_function, x, next=next, maxeval=number_of_evaluations_for_each_experiment)
-
-                        print(objective_function.minimas)
 
                         # Create a folder for the current configuration
                         folder_name = f"{objective_function.name}_{dimension}_{permutation_size}_{next.__name__}"
