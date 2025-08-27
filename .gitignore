@@ -1,7 +1,4 @@
 **/__pycache__/**
-src/generators/combinatorial/parameters/generateCOP.py
-src/generators/combinatorial/parameters/LinearProg.py
-src/generators/combinatorial/parameters/Zvalue.py
 src/generators/combinatorial/tests/data_generators/generateCOP.R
 src/generators/combinatorial/tests/data_generators/LinearProg.R
 src/generators/combinatorial/tests/data_generators/Zvalue.R
