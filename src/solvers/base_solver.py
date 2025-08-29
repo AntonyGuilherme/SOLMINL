@@ -159,7 +159,7 @@ def solve(fobj: MixedFunction, x: Solution, next, maxeval=50):
                 samples[-1].append(x.value)
                 samples_q[-1].append(x.c_value)
                 samples_p[-1].append(x.p_value)
-                print([num_evals,x.continuos, x.permutation, x.c_value, x.p_value, x.value])
+                print(f"{num_evals} {x.continuos.tolist()} {x.permutation} {x.c_value} {x.p_value} {x.value}")
 
             else:
                 num_evals += 1
@@ -173,26 +173,36 @@ def solve(fobj: MixedFunction, x: Solution, next, maxeval=50):
                 samples[-1].append(x.value)
                 samples_q[-1].append(x.c_value)
                 samples_p[-1].append(x.p_value)
+                print(f"{num_evals} {x.continuos.tolist()} {x.permutation} {x.c_value} {x.p_value} {x.value}")
 
         return history, samples, samples_p, samples_q
 
 
-def run(continuos_dimension: int, permutation_size: int, distance: str, continuos_minima: int, attempts: int = 30):
-    nexts = [next_swap, next_swap_close, next_swap_invertion]
-    objectives = [MixIndependentFunction()]
+objective_functions = {
+    'mif': MixIndependentFunction()
+}
 
-    for next in nexts:
-        for objective_function in objectives:
-                objective_function.calculate_parameters(continuos_dimension=continuos_dimension, 
+strategies = {
+    'n': next_swap, 
+    'nc': next_swap_close,
+    'nsi': next_swap_invertion
+}
+
+def run(continuos_dimension: int, permutation_size: int, distance: str, continuos_minima: int, next:str, objective:str, attempts: int = 30):
+    print(f"{continuos_dimension},{continuos_minima},{permutation_size},{permutation_size},{distance},{next},{objective}")
+    next_str = strategies[next]
+    objective_function = objective_functions[objective]
+
+    objective_function.calculate_parameters(continuos_dimension=continuos_dimension, 
                                                         permutation_size=permutation_size, 
                                                         continuos_minima=continuos_minima, 
                                                         permutation_minima=permutation_size,
                                                         distance=distance)
                         
-                x = Solution(dimension=continuos_dimension, permutation_size=permutation_size)
-                x.value, x.c_value, x.p_value = objective_function.evaluate(x)
+    x = Solution(dimension=continuos_dimension, permutation_size=permutation_size)
+    x.value, x.c_value, x.p_value = objective_function.evaluate(x)
 
-                solve(objective_function, x, next=next, maxeval=attempts)
+    solve(objective_function, x, next=next_str, maxeval=attempts)
     pass
 
 # dimensions = [2]

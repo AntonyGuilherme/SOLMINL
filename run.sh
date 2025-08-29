@@ -8,7 +8,7 @@
 # echo "Parameter 1: $1"
 # echo "Parameter 2: $2"
 
-srun python3 -m runner.py  $1 $2 $3 $4
+srun python3 -m src.experiments.runner  $1 $2 $3 $4 $5 $6
 
 
 
