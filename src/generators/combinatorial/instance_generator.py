@@ -93,10 +93,13 @@ def _calculate_cayley_distances(permutations):
 
 def _create_permutations(permutation_size: int, number_of_optimas: int):
     consensus_permutations = []
+    created_consensus = {}
 
-    for _ in range(0, number_of_optimas):
-            elements = list(range(1, permutation_size + 1))
-            np.random.shuffle(elements)
+    while len(created_consensus) < number_of_optimas:
+        elements = list(range(1, permutation_size + 1))
+        np.random.shuffle(elements)
+        if str(elements) not in created_consensus:
+            created_consensus[str(elements)] = True
             consensus_permutations.append(elements)
 
     return consensus_permutations
