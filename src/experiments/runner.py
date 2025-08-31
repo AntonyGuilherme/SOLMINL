@@ -15,4 +15,5 @@ run(continuos_dimension=continuos_dimension,
     permutation_size=permutation_size, 
     distance=distance,
     next=strategie,
-    objective=objective_function)
+    objective=objective_function,
+    attempts=100)

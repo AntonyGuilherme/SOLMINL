@@ -25,7 +25,7 @@ class QuadraticFunction:
             if np.random.rand() < 0.5:
                 global_minimum[k] = 0.1
             else:
-                global_minimum[1] = 0.9 
+                global_minimum[k] = 0.9 
 
 
         minima_x.append(global_minimum)
@@ -46,7 +46,7 @@ class QuadraticFunction:
                     if np.random.rand() < 0.5:
                         global_minimum[k] = 0.1
                     else:
-                        global_minimum[1] = 0.9
+                        global_minimum[k] = 0.9
 
                 self.B_inv_list = [np.linalg.inv(self.generate_positive_definite_matrix(self.dimension)) for _ in range(self.numberOfLocalMinima)]
                 i = 1
