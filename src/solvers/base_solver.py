@@ -82,15 +82,11 @@ def numerical_gradient(fobj: MixedFunction, x: Solution, epsilon=1e-6):
         grad[i] = (ev_x1 - ev_x2) / (2 * epsilon)
     return grad
 
-def continuos_step(objective: MixedFunction, x: Solution, direction = -1):
+def continuos_step(objective: MixedFunction, x: Solution, step =1e-5, direction = -1):
     y = copy.deepcopy(x)
-    steps = 20
-    i = 0
-    while y.value <= x.value and steps > i:
-        i += 1
+    while y.value < x.value:
         grad = numerical_gradient(objective, y)
-        step_size = 0.05
-        y.continuos = y.continuos + direction * step_size * grad
+        y.continuos = y.continuos + direction * step * grad
         y.continuos = np.clip(y.continuos, 0.0, 1.0)
         y.value, y.c_value, y.p_value = objective.evaluate(y, p_value=y.p_value)
 
@@ -159,7 +155,7 @@ def solve(fobj: MixedFunction, x: Solution, next, maxeval=50):
                 samples[-1].append(x.value)
                 samples_q[-1].append(x.c_value)
                 samples_p[-1].append(x.p_value)
-                print(f"{num_evals} {x.continuos.tolist()} {x.permutation} {x.c_value} {x.p_value} {x.value}")
+                print(f"{num_evals} {x.continuos} {x.permutation} {x.c_value} {x.p_value} {x.value}")
 
             else:
                 num_evals += 1
@@ -205,54 +201,54 @@ def run(continuos_dimension: int, permutation_size: int, distance: str, continuo
     solve(objective_function, x, next=next_str, maxeval=attempts)
     pass
 
-# dimensions = [2]
-# sizes = [5]
-# distances = ["K"]
-# nexts = [next_swap, next_swap_close, next_swap_invertion]
-# objectives = [MixIndependentFunction()]
-# number_of_evaluations_for_each_experiment = 3
-# number_of_continuos_minima = 2
-# number_of_permutation_minima = 2
+dimensions = [6]
+sizes = [10]
+distances = ["K"]
+nexts = [next_swap]
+objectives = [MixIndependentFunction()]
+number_of_evaluations_for_each_experiment = 100
+number_of_continuos_minima = 6
+number_of_permutation_minima = 10
 
-# for dimension in dimensions:
-#     for permutation_size in sizes:
-#             for distance in distances:
-#                 for next in nexts:
-#                     for objective_function in objectives:
-#                         objective_function.calculate_parameters(continuos_dimension=dimension, 
-#                                                                 permutation_size=permutation_size, 
-#                                                                 continuos_minima=number_of_continuos_minima, 
-#                                                                 permutation_minima=number_of_permutation_minima,
-#                                                                 distance=distance)
+for dimension in dimensions:
+    for permutation_size in sizes:
+            for distance in distances:
+                for next in nexts:
+                    for objective_function in objectives:
+                        objective_function.calculate_parameters(continuos_dimension=dimension, 
+                                                                permutation_size=permutation_size, 
+                                                                continuos_minima=number_of_continuos_minima, 
+                                                                permutation_minima=number_of_permutation_minima,
+                                                                distance=distance)
                         
-#                         x = Solution(dimension=dimension, permutation_size=permutation_size)
-#                         x.value, x.c_value, x.p_value = objective_function.evaluate(x)
+                        x = Solution(dimension=dimension, permutation_size=permutation_size)
+                        x.value, x.c_value, x.p_value = objective_function.evaluate(x)
 
-#                         historic, samples, samples_p, samples_q = solve(objective_function, x, next=next, maxeval=number_of_evaluations_for_each_experiment)
+                        historic, samples, samples_p, samples_q = solve(objective_function, x, next=next, maxeval=number_of_evaluations_for_each_experiment)
 
-#                         # Create a folder for the current configuration
-#                         folder_name = f"{objective_function.name}_{dimension}_{permutation_size}_{next.__name__}"
-#                         os.makedirs(folder_name, exist_ok=True)
+                        # Create a folder for the current configuration
+                        folder_name = f"{objective_function.name}_{dimension}_{permutation_size}_{next.__name__}"
+                        os.makedirs(folder_name, exist_ok=True)
 
-#                         plot_optimization_histories(
-#                             [historic], 
-#                             ["QUADRATIC"],
-#                             best_possible=objective_function.minimas,
-#                             output_path=os.path.join(folder_name, f"historic.png"),
-#                             log=objective_function.log
-#                         )
+                        plot_optimization_histories(
+                            [historic], 
+                            ["QUADRATIC"],
+                            best_possible=objective_function.minimas,
+                            output_path=os.path.join(folder_name, f"historic.png"),
+                            log=objective_function.log
+                        )
 
-#                         plot_samples(
-#                             samples, 
-#                             output=os.path.join(folder_name, f"samples.png"), 
-#                             best_possible=objective_function.minimas,
-#                             log=objective_function.log
-#                         )
+                        plot_samples(
+                            samples, 
+                            output=os.path.join(folder_name, f"samples.png"), 
+                            best_possible=objective_function.minimas,
+                            log=objective_function.log
+                        )
 
-#                         plot_samples_with_ci(
-#                             [samples_p, samples_q], 
-#                             "Quadratic and Permutation Evolution", 
-#                             subtitle=["Permutation", "Quadratic"],
-#                             log=objective_function.log,
-#                             output=os.path.join(folder_name, f"ie.png")
-#                         )
+                        plot_samples_with_ci(
+                            [samples_p, samples_q], 
+                            "Quadratic and Permutation Evolution", 
+                            subtitle=["Permutation", "Quadratic"],
+                            log=objective_function.log,
+                            output=os.path.join(folder_name, f"ie.png")
+                        )

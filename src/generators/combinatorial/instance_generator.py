@@ -1,5 +1,4 @@
 import numpy as np
-from typing import Dict, List
 import matplotlib.pyplot as plt
 import itertools
 from scipy.stats import kendalltau
