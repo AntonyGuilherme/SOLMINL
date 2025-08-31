@@ -7,9 +7,6 @@ class QuadraticFunction:
         self.dimension = dimension
         self.numberOfLocalMinima = numberOfLocalMinima
         self.generate_form()
-
-        for i, x in enumerate(self.p_list):
-             print(f"{self.minimas[i]} {self.evaluate(x)}")
         pass
 
     def generate_form(self):
@@ -19,10 +16,23 @@ class QuadraticFunction:
 
         i = 1
         delta = (np.sqrt(self.dimension)- 0.2)/(2*(self.numberOfLocalMinima - 1))
-        self.minimas = [delta]
-        minima_x.append(np.ones(self.dimension) * 0.1)
+        self.minimas = []
+        for w in range(self.numberOfLocalMinima):
+            self.minimas.append(0.1 + delta*w)
+
+        global_minimum = np.ones(self.dimension)
+        for k in range(self.dimension):
+            if np.random.rand() < 0.5:
+                global_minimum[k] = 0.1
+            else:
+                global_minimum[1] = 0.9 
+
+
+        minima_x.append(global_minimum)
+        minima_spread_constant = np.divide(1, self.numberOfLocalMinima)
+        delta_space = np.ones(self.dimension) * np.sqrt(self.dimension) * minima_spread_constant
         
-        trials = 1000 * self.numberOfLocalMinima
+        trials = 10000
         reshape = 1000
 
         while i < self.numberOfLocalMinima:
@@ -30,34 +40,41 @@ class QuadraticFunction:
             trials = trials - 1
 
             if trials <= 0:
+                
+                global_minimum = np.ones(self.dimension)
+                for k in range(self.dimension):
+                    if np.random.rand() < 0.5:
+                        global_minimum[k] = 0.1
+                    else:
+                        global_minimum[1] = 0.9
+
                 self.B_inv_list = [np.linalg.inv(self.generate_positive_definite_matrix(self.dimension)) for _ in range(self.numberOfLocalMinima)]
                 i = 1
-                minima_x = [np.ones(self.dimension) * 0.1]
-                trials = 10000
+                minima_x = [global_minimum]
+                trials = 1000
                 reshape = reshape - 1
                 if reshape <= 0:
                     raise Exception("The minima could not be posicioned using this dimension and number of optima combination.")
             
-            if i >= len(self.minimas):
-                self.minimas.append(0.1 + delta*i)
-            
             y = np.random.rand(self.dimension)
-
+            space: float =  delta_space.T @ self.B_inv_list[i] @ delta_space
+                
             for j,pj in enumerate(minima_x):
                 diff = y - pj
 
-                if np.linalg.norm(diff) < np.sqrt(self.dimension) * 0.20:
+                if np.linalg.norm(diff) < np.sqrt(self.dimension) * minima_spread_constant:
                     distant = False
                     break
 
                 add: float = diff.T @ self.B_inv_list[j] @ diff + self.minimas[j]
-                if add < (self.minimas[i] + 0.1) :
+                if add < (self.minimas[i] + space) :
                     distant = False
                     break
                 
             if distant:
                 minima_x.append(y)
                 i += 1
+                trials = 10000
 
         self.p_list = minima_x   
 
@@ -124,14 +141,3 @@ class QuadraticFunction:
 
         plt.tight_layout()
         plt.show()
-
-
-
-
-
-# f = QuadraticFunction(dimension= 2, numberOfLocalMinima=7)
-
-# f.visualize()
-
-
-
