@@ -82,32 +82,33 @@ def numerical_gradient(fobj: MixedFunction, x: Solution, epsilon=1e-6):
         grad[i] = (ev_x1 - ev_x2) / (2 * epsilon)
     return grad
 
-def continuos_step(objective: MixedFunction, x: Solution, step =1e-5, direction = -1):
+def continuos_step(objective: MixedFunction, x: Solution, step =1e-3, direction = -1):
     y = copy.deepcopy(x)
-    while y.value < x.value:
-        grad = numerical_gradient(objective, y)
-        y.continuos = y.continuos + direction * step * grad
-        y.continuos = np.clip(y.continuos, 0.0, 1.0)
-        y.value, y.c_value, y.p_value = objective.evaluate(y, p_value=y.p_value)
+    k = copy.deepcopy(x)
+    while True:
+        grad = numerical_gradient(objective, k)
+        k.continuos = k.continuos + direction * step * grad
+        k.continuos = np.clip(k.continuos, 0.0, 1.0)
+        k.value, k.c_value, k.p_value = objective.evaluate(k, p_value=k.p_value)
+        
+        if (k.value + 1e-7) > y.value:
+            break
+        else:
+            y = copy.deepcopy(k)
 
     return y
 
-def random_continuos_reposition(x:Solution, epslon=1e-6):
+def random_continuos_reposition(x:Solution):
     """
     Generate a point in [0,1]^D that is at least `min_dist` away from `x`,
     by adding/subtracting noise dimension-wise until the norm is sufficient.
     """
     D = len(x.continuos)
     delta = np.zeros_like(x.continuos)
+    dist = np.sqrt(D) * 0.50
 
-    while np.linalg.norm(delta) < epslon:
-        direction = np.random.choice([-1, 1], size=D)
-        step = np.random.uniform(0.05, 0.2, size=D)
-        delta = direction * step
-        candidate = x.continuos + delta
-
-        # Project to [0,1]
-        candidate = np.clip(candidate, 0.0, 1.0)
+    while np.linalg.norm(delta) < dist:
+        candidate = np.random.random(D)
         delta = candidate - x.continuos
 
     return candidate
@@ -169,7 +170,7 @@ def solve(fobj: MixedFunction, x: Solution, next, maxeval=50):
                 samples[-1].append(x.value)
                 samples_q[-1].append(x.c_value)
                 samples_p[-1].append(x.p_value)
-                print(f"{num_evals} {x.continuos.tolist()} {x.permutation} {x.c_value} {x.p_value} {x.value}")
+                print(f"{num_evals} {x.continuos} {x.permutation} {x.c_value} {x.p_value} {x.value}")
 
         return history, samples, samples_p, samples_q
 
@@ -201,14 +202,14 @@ def run(continuos_dimension: int, permutation_size: int, distance: str, continuo
     solve(objective_function, x, next=next_str, maxeval=attempts)
     pass
 
-# dimensions = [6]
-# sizes = [10]
+# dimensions = [2,4,7]
+# sizes = [5]
 # distances = ["K"]
 # nexts = [next_swap]
 # objectives = [MixIndependentFunction()]
-# number_of_evaluations_for_each_experiment = 100
+# number_of_evaluations_for_each_experiment = 20
 # number_of_continuos_minima = 6
-# number_of_permutation_minima = 10
+# number_of_permutation_minima = 3
 
 # for dimension in dimensions:
 #     for permutation_size in sizes:
