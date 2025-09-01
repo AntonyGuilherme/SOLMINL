@@ -202,14 +202,14 @@ def run(continuos_dimension: int, permutation_size: int, distance: str, continuo
     solve(objective_function, x, next=next_str, maxeval=attempts)
     pass
 
-# dimensions = [2,4,7]
+# dimensions = [2]
 # sizes = [5]
 # distances = ["K"]
 # nexts = [next_swap]
 # objectives = [MixIndependentFunction()]
-# number_of_evaluations_for_each_experiment = 20
-# number_of_continuos_minima = 6
-# number_of_permutation_minima = 3
+# number_of_evaluations_for_each_experiment = 100
+# number_of_continuos_minima = 4
+# number_of_permutation_minima = 5
 
 # for dimension in dimensions:
 #     for permutation_size in sizes:
@@ -227,7 +227,7 @@ def run(continuos_dimension: int, permutation_size: int, distance: str, continuo
 
 #                         historic, samples, samples_p, samples_q = solve(objective_function, x, next=next, maxeval=number_of_evaluations_for_each_experiment)
 
-#                         # Create a folder for the current configuration
+#                         Create a folder for the current configuration
 #                         folder_name = f"{objective_function.name}_{dimension}_{permutation_size}_{next.__name__}"
 #                         os.makedirs(folder_name, exist_ok=True)
 
@@ -253,3 +253,5 @@ def run(continuos_dimension: int, permutation_size: int, distance: str, continuo
 #                             log=objective_function.log,
 #                             output=os.path.join(folder_name, f"ie.png")
 #                         )
+
+# objectives[0].continuos.visualize()

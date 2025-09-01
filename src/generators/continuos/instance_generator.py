@@ -3,9 +3,11 @@ import sys
 
 class QuadraticFunction:
 
-    def __init__(self, dimension: int = 2, numberOfLocalMinima: int = 5, minimas = None):
+    def __init__(self, dimension: int = 2, numberOfLocalMinima: int = 5, minima_proximity = 2, global_minimum = 1):
         self.dimension = dimension
         self.numberOfLocalMinima = numberOfLocalMinima
+        self.minima_proximity = minima_proximity
+        self.global_minimum = global_minimum
         self.generate_form()
         pass
 
@@ -15,17 +17,12 @@ class QuadraticFunction:
         self.B_inv_list = [np.linalg.inv(self.generate_positive_definite_matrix(self.dimension)) for _ in range(self.numberOfLocalMinima)]
 
         i = 1
-        delta = (np.sqrt(self.dimension)- 0.2)/(2*(self.numberOfLocalMinima - 1))
+        delta = np.sqrt(self.dimension)/(self.minima_proximity*(self.numberOfLocalMinima - 1))
         self.minimas = []
         for w in range(self.numberOfLocalMinima):
-            self.minimas.append(0.1 + delta*w)
+            self.minimas.append(self.global_minimum + delta*w)
 
-        global_minimum = np.ones(self.dimension)
-        for k in range(self.dimension):
-            if np.random.rand() < 0.5:
-                global_minimum[k] = 0.1
-            else:
-                global_minimum[k] = 0.9 
+        global_minimum = np.random.rand(self.dimension)
 
 
         minima_x.append(global_minimum)
@@ -40,19 +37,14 @@ class QuadraticFunction:
             trials = trials - 1
 
             if trials <= 0:
-                
-                global_minimum = np.ones(self.dimension)
-                for k in range(self.dimension):
-                    if np.random.rand() < 0.5:
-                        global_minimum[k] = 0.1
-                    else:
-                        global_minimum[k] = 0.9
-
+    
                 self.B_inv_list = [np.linalg.inv(self.generate_positive_definite_matrix(self.dimension)) for _ in range(self.numberOfLocalMinima)]
                 i = 1
+                
                 minima_x = [global_minimum]
                 trials = 1000
                 reshape = reshape - 1
+
                 if reshape <= 0:
                     raise Exception("The minima could not be posicioned using this dimension and number of optima combination.")
             
@@ -81,8 +73,11 @@ class QuadraticFunction:
 
     # Generate symmetric positive definite matrices B_i
     def generate_positive_definite_matrix(self, d):
-        A = np.random.randn(d, d)
-        return A @ A.T + np.eye(d) * 0.1  # Ensure positive definiteness
+        eigenvalues = np.linspace(0.2, 2.0, d)
+        D = np.diag(eigenvalues)
+        Q, _ = np.linalg.qr(np.random.randn(d, d))
+        pd_matrix = Q @ D @ Q.T 
+        return pd_matrix
 
     # Define the function f_quad(x)
     def evaluate(self, x):
@@ -140,4 +135,5 @@ class QuadraticFunction:
         ax2.set_title('Quadratic Function Contour (Nivel Curve)')
 
         plt.tight_layout()
-        plt.show()
+        plt.savefig("teste.png")
+        plt.close()

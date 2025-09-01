@@ -23,7 +23,7 @@ class MixIndependentFunction:
         self.permutation.caculate_parameters(permutation_size, permutation_minima, distance)
         
         permutation_minima = [self.permutation.evaluate(consensus)  for consensus in self.permutation.permutation.consensus]
-        self.continuos = QuadraticFunction(dimension=continuos_dimension, numberOfLocalMinima= continuos_minima)
+        self.continuos = QuadraticFunction(dimension=continuos_dimension, numberOfLocalMinima= continuos_minima, minima_proximity=10)
 
         self.minimas = []
 
