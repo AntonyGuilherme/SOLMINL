@@ -5,4 +5,5 @@ src/generators/combinatorial/tests/data_generators/Zvalue.R
 *.png
 *.txt
 results/*
-experiments/*
+experiments/*.png
+*.zip

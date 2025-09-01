@@ -289,7 +289,7 @@ class ZetaPermutation:
 
     def caculate_parameters(self, permutation_size, number_of_minimas, distance = "K"):
         self.permutation = Permutation(permutation_size, number_of_minimas, distance)
-        self.permutation.calc_parameters_easy()
+        self.permutation.calc_parameters_difficult()
     
     def evaluate(self, perm: np.ndarray) -> float:
         value_normalized = np.divide(self.permutation.evaluate(perm), self.permutation.maximum)
