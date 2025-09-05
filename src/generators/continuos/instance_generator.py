@@ -1,5 +1,6 @@
 import numpy as np
 import sys
+from typing import List
 
 class QuadraticFunction:
 
@@ -18,12 +19,11 @@ class QuadraticFunction:
 
         i = 1
         delta = np.sqrt(self.dimension)/(self.minima_proximity*(self.numberOfLocalMinima - 1))
-        self.minimas = []
+        self.minimas: List[float] = []
         for w in range(self.numberOfLocalMinima):
             self.minimas.append(self.global_minimum + delta*w)
 
         global_minimum = np.random.rand(self.dimension)
-
 
         minima_x.append(global_minimum)
         minima_spread_constant = np.divide(1, self.numberOfLocalMinima)

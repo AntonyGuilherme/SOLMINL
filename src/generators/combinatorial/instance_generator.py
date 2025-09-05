@@ -6,8 +6,7 @@ from .parameters import Zvalue
 from .parameters import LinearProg
 import copy
 from decimal import Decimal, getcontext
-import sys
-from typing import Tuple
+from typing import Tuple, List
 
 getcontext().prec = 100
 
@@ -169,15 +168,22 @@ def kendall(perm1, perm2) -> int:
 
 class Permutation:
 
-    def __init__(self, permutation_size, number_of_optimas, distance="K"):
+    def __init__(self, permutation_size, number_of_optimas, distance="K", difficult = "E"):
         self.permutation_size = permutation_size
         self.number_of_optimas = number_of_optimas
         self.distance = distance
+        self.difficult = difficult
         if distance == "K":
             self.calc_distance = kendall
         else:
             self.calc_distance = cayley
         pass
+
+    def create_parameters(self):
+        if self.difficult == "E":
+            self.calc_parameters_easy()
+        elif self.difficult == "H":
+            self.calc_parameters_difficult()
 
     def calc_parameters_easy(self, permutations = None):
         instance_parameters = _create_instance(self.permutation_size, self.number_of_optimas, self.distance, typ="max", permutations = permutations)
@@ -188,11 +194,12 @@ class Permutation:
         self._extract_parameters(instance_parameters)
 
     def _extract_parameters(self, instance_parameters):
-        self.weights = instance_parameters.weights
-        self.consensus = instance_parameters.consensus_permutations
-        self.zetas = instance_parameters.zetas
-        self.thetas = [theta[0] for theta in instance_parameters.thetas]
-        self.maximum = np.max([np.divide(self.weights[i], self.zetas[i]) for i in range(len(self.weights))])
+        self.weights: List[float] = instance_parameters.weights
+        self.consensus: List[List[int]] = instance_parameters.consensus_permutations
+        self.zetas: List[float] = instance_parameters.zetas
+        self.thetas: List[float] = [theta[0] for theta in instance_parameters.thetas]
+        self.global_optimum: float = np.divide(self.weights[0], self.zetas[0])
+        self.optima : List[float] = [self.weights[i] / zeta for i, zeta in enumerate(self.zetas)]
 
     def evaluate(self, perm: np.ndarray) -> float:
         value = Decimal(0)
@@ -309,21 +316,32 @@ class Permutation:
 
 class ZetaPermutation:
     permutation: Permutation
+    optima: List[Decimal]
 
-    def caculate_parameters(self, permutation_size, number_of_minimas, distance = "K"):
-        self.permutation = Permutation(permutation_size, number_of_minimas, distance)
-        self.permutation.calc_parameters_easy()
+    def caculate_parameters(self, permutation_size, number_of_minimas, distance = "K", difficult = "E"):
+        self.permutation = Permutation(permutation_size, number_of_minimas, distance, difficult)
+        self.permutation.create_parameters()
+        self.optima = []
+
+        for optimum in self.permutation.optima:
+            self.optima.append(self.transform(optimum))
+        
+        pass
+
+    def transform(self, value) -> Decimal:
+        value_normalized = Decimal(value) / Decimal(self.permutation.global_optimum)
+
+        return Decimal(2) - Decimal(value_normalized)
+
     
     def evaluate(self, perm: np.ndarray) -> Tuple[float, float]:
 
-        value, comp = self.permutation.evaluate(perm)
+        value, ln_value = self.permutation.evaluate(perm)
 
-        value_normalized = Decimal(value) / Decimal(self.permutation.maximum)
-
-        return Decimal(2) - Decimal(value_normalized), comp
+        return self.transform(value), ln_value
     
     def evaluate_and_get_index(self, perm: np.ndarray):
         value, i = self.permutation.evaluate_and_get_index(perm)
-        value_normalized = np.divide(value, self.permutation.maximum)
+        value_normalized = np.divide(value, self.permutation.global_optimum)
 
         return np.subtract(2, value_normalized), i

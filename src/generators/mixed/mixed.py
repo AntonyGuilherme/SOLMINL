@@ -22,9 +22,9 @@ class MixIndependentFunction:
     name = "mif"
     log = True
 
-    def calculate_parameters(self, continuos_dimension = 2, permutation_size = 5, continuos_minima = 2, permutation_minima = 2, distance = "K"):
+    def calculate_parameters(self, continuos_dimension = 2, permutation_size = 5, continuos_minima = 2, permutation_minima = 2, distance = "K", difficult="E"):
         self.permutation = ZetaPermutation()
-        self.permutation.caculate_parameters(permutation_size, permutation_minima, distance)
+        self.permutation.caculate_parameters(permutation_size, permutation_minima, distance, difficult)
         
         permutation_minima = [self.permutation.evaluate(consensus)  for consensus in self.permutation.permutation.consensus]
         self.continuos = QuadraticFunction(dimension=continuos_dimension, numberOfLocalMinima= continuos_minima, minima_proximity=10)
@@ -33,8 +33,11 @@ class MixIndependentFunction:
 
         for i, minimum_i in enumerate(permutation_minima):
             for j , minimum_j in enumerate(self.continuos.minimas):
-                print(f"{self.continuos.p_list[j].tolist()} {self.permutation.permutation.consensus[i]} {float(minimum_j)} {minimum_i} {float(np.multiply(minimum_i[0], Decimal(minimum_j)))}")
                 self.minimas.append(np.multiply(minimum_i[0], Decimal(minimum_j)))
+        pass
+
+    def transform(self, discret, continuos) -> Decimal:
+        return Decimal(discret) * Decimal(continuos)
 
     def evaluate(self, x: Solution, c_value = None, p_value = None):
         comp = x.comp_p_value
@@ -44,7 +47,14 @@ class MixIndependentFunction:
         if c_value is None:
             c_value = self.continuos.evaluate(x.continuos)
 
-        return Decimal(c_value) * p_value, c_value, p_value, comp
+        return self.transform(p_value, c_value), c_value, p_value, comp
+    
+    def log_info(self):
+        print(f"{self.continuos.dimension}&{self.continuos.numberOfLocalMinima}&{self.permutation.permutation.permutation_size}&{self.permutation.permutation.number_of_optimas}&{self.permutation.permutation.distance}&{self.permutation.permutation.difficult}+")
+        for p, p_optimum in enumerate(self.permutation.optima):
+            for c, c_optimum in enumerate(self.continuos.minimas):
+                print(f"{self.continuos.p_list[c]}&{self.permutation.permutation.consensus[p]}&{c_optimum:.6}&{p_optimum:.6}&{self.transform(p_optimum,c_optimum):.6}+")
+                
 
 
 class MixedFunction:
