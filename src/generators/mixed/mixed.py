@@ -2,6 +2,9 @@ from src.generators.combinatorial.instance_generator import Permutation, ZetaPer
 from src.generators.continuos.instance_generator import QuadraticFunction
 import numpy as np
 from typing import Dict, List
+from decimal import Decimal, getcontext
+
+getcontext().prec = 100
 
 class Solution:
     def __init__(self, dimension = 2, permutation_size = 5):
@@ -10,6 +13,7 @@ class Solution:
         self.value = 0.0
         self.c_value = 0.0
         self.p_value = 0.0
+        self.comp_p_value = 0.0
         pass
 
 class MixIndependentFunction:
@@ -29,17 +33,18 @@ class MixIndependentFunction:
 
         for i, minimum_i in enumerate(permutation_minima):
             for j , minimum_j in enumerate(self.continuos.minimas):
-                print(f"{self.continuos.p_list[j].tolist()} {self.permutation.permutation.consensus[i]} {float(minimum_j)} {float(minimum_i)} {float(np.multiply(minimum_i, minimum_j))}")
-                self.minimas.append(np.multiply(minimum_i, minimum_j))
+                print(f"{self.continuos.p_list[j].tolist()} {self.permutation.permutation.consensus[i]} {float(minimum_j)} {minimum_i} {float(np.multiply(minimum_i[0], Decimal(minimum_j)))}")
+                self.minimas.append(np.multiply(minimum_i[0], Decimal(minimum_j)))
 
     def evaluate(self, x: Solution, c_value = None, p_value = None):
+        comp = x.comp_p_value
         if p_value is None:
-            p_value = self.permutation.evaluate(x.permutation)
+            p_value, comp = self.permutation.evaluate(x.permutation)
         
         if c_value is None:
             c_value = self.continuos.evaluate(x.continuos)
 
-        return c_value * p_value, c_value, p_value
+        return Decimal(c_value) * p_value, c_value, p_value, comp
 
 
 class MixedFunction:
@@ -74,7 +79,7 @@ class QuadraticLandscapeByMallows:
 
     def calculate_parameters(self, continuos_dimension = 2, permutation_size = 5, number_of_minimas = 5, distance = "K"):
         self.permutation = Permutation(permutation_size, number_of_minimas, distance)
-        self.permutation.calc_parameters_difficult()
+        self.permutation.calc_parameters_easy()
 
         self.continuos = {}
         self.minimas = []

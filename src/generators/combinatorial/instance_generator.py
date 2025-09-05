@@ -5,12 +5,17 @@ from scipy.stats import kendalltau
 from .parameters import Zvalue
 from .parameters import LinearProg
 import copy
+from decimal import Decimal, getcontext
+import sys
+from typing import Tuple
+
+getcontext().prec = 100
 
 import matplotlib
 matplotlib.use('Agg')
 
-def _generate_difficult_thetas(permutation_size, number_of_optimas):
-    small_range = (np.log(permutation_size - .5), np.log(permutation_size - .5) + 1)
+def _generate_difficult_thetas(permutation_size, number_of_optimas, distance = "K"):
+    small_range = (np.log(permutation_size - .5), 1.5*np.log(permutation_size - .5))
     normal_range = (2 * np.log(permutation_size - 1), 3*np.log(permutation_size - 1))
     num_cols = permutation_size - 1
     thetas_matrix = np.zeros((number_of_optimas, num_cols))
@@ -26,8 +31,8 @@ def _generate_difficult_thetas(permutation_size, number_of_optimas):
     return thetas_matrix
 
 def _generate_easy_thetas(permutation_size, number_of_optimas):
-    small_range = (np.log(permutation_size - .5), np.log(permutation_size - .5) + 1)
-    normal_range = (2 * np.log(permutation_size - 1), 3*np.log(permutation_size - 1))
+    small_range = (np.log(permutation_size - .5), 1.5 * np.log(permutation_size - .5))
+    normal_range = (2 * np.log(permutation_size - 0.5), 3*np.log(permutation_size - 1))
     num_cols = permutation_size - 1 
     thetas_matrix = np.zeros((number_of_optimas, num_cols))
     for i in range(number_of_optimas):
@@ -93,13 +98,27 @@ def _calculate_cayley_distances(permutations):
 def _create_permutations(permutation_size: int, number_of_optimas: int):
     consensus_permutations = []
     created_consensus = {}
+    n = permutation_size
+    # The maximum possible number of pairs for a permutation of length n
+    max_possible_pairs = n * (n - 1) / 2
+    space = round(np.divide(1, number_of_optimas)*max_possible_pairs)
 
     while len(created_consensus) < number_of_optimas:
         elements = list(range(1, permutation_size + 1))
         np.random.shuffle(elements)
         if str(elements) not in created_consensus:
-            created_consensus[str(elements)] = True
-            consensus_permutations.append(elements)
+            should_add = True
+            for c in consensus_permutations:
+                tau, _ = kendalltau(c, elements)
+                discordant_pairs = (1 - tau) * max_possible_pairs / 2
+                kd = round(discordant_pairs)
+
+                if kd < space:
+                    should_add = False
+
+            if should_add:    
+                created_consensus[str(elements)] = True
+                consensus_permutations.append(elements)
 
     return consensus_permutations
 
@@ -142,7 +161,9 @@ def kendall(perm1, perm2) -> int:
     max_possible_pairs = n * (n - 1) / 2
 
     tau, _ = kendalltau(perm1, perm2)
-    discordant_pairs = (1 - tau) * max_possible_pairs / 2
+
+    discordant_pairs = np.multiply((1 - tau)/2, max_possible_pairs)
+        
     return round(discordant_pairs)
 
 
@@ -174,19 +195,21 @@ class Permutation:
         self.maximum = np.max([np.divide(self.weights[i], self.zetas[i]) for i in range(len(self.weights))])
 
     def evaluate(self, perm: np.ndarray) -> float:
-        value = 0
+        value = Decimal(0)
+        comp_value = Decimal(-float('inf'))
 
         for i in range(self.number_of_optimas):
             distance = self.calc_distance(self.consensus[i], perm)
 
-            mallows_value = np.divide(
-                np.multiply(self.weights[i], np.exp(-distance * self.thetas[i])),
-                self.zetas[i])
+            weight_normalized = Decimal(self.weights[i]/self.zetas[i])
             
-            if value < mallows_value:
+            mallows_value = Decimal(weight_normalized * Decimal(np.exp(-distance * self.thetas[i])))
+            c = np.log(self.weights[i]/self.zetas[i]) - distance*self.thetas[i]
+            if  c > comp_value:
                 value = mallows_value
+                comp_value = c
 
-        return value
+        return value, comp_value
     
     def evaluate_and_get_index(self, perm: np.ndarray):
         value = 0
@@ -278,7 +301,7 @@ class Permutation:
         plt.ylabel("Evaluated Value (log scale)")
         plt.title("Permutation Values (Lexicographic Order) with Consensus and Solver Steps")
         plt.grid(True, linestyle="--", alpha=0.5)
-        plt.yscale('log')
+        #plt.yscale('log')
         plt.legend()
         plt.tight_layout()
         plt.savefig(output_path)
@@ -289,12 +312,15 @@ class ZetaPermutation:
 
     def caculate_parameters(self, permutation_size, number_of_minimas, distance = "K"):
         self.permutation = Permutation(permutation_size, number_of_minimas, distance)
-        self.permutation.calc_parameters_difficult()
+        self.permutation.calc_parameters_easy()
     
-    def evaluate(self, perm: np.ndarray) -> float:
-        value_normalized = np.divide(self.permutation.evaluate(perm), self.permutation.maximum)
+    def evaluate(self, perm: np.ndarray) -> Tuple[float, float]:
 
-        return np.subtract(2, value_normalized)
+        value, comp = self.permutation.evaluate(perm)
+
+        value_normalized = Decimal(value) / Decimal(self.permutation.maximum)
+
+        return Decimal(2) - Decimal(value_normalized), comp
     
     def evaluate_and_get_index(self, perm: np.ndarray):
         value, i = self.permutation.evaluate_and_get_index(perm)
