@@ -16,11 +16,16 @@ class Solution:
         self.comp_p_value = 0.0
         pass
 
+    def print(self, ref,owner):
+        print(f"{ref}&{owner}&{self.continuos}&{self.permutation}&{float(self.c_value):.6f}&{float(self.p_value):.6f}&{float(self.value):.6f}+")
+        pass
+
 class MixIndependentFunction:
     permutation: ZetaPermutation
     continuos: QuadraticFunction
     name = "mif"
     log = True
+    first_step = "C"
 
     def calculate_parameters(self, continuos_dimension = 2, permutation_size = 5, continuos_minima = 2, permutation_minima = 2, distance = "K", difficult="E"):
         self.permutation = ZetaPermutation()

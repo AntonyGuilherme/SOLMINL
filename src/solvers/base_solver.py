@@ -50,8 +50,9 @@ def next_swap_invertion(f: MixedFunction, x: Solution):
 
     return y
 
-def next_swap(f : MixedFunction, x : Solution):
+def next_swap(f : MixedFunction, x : Solution, num_evals:int):
     y = copy.deepcopy(x)
+    k = x
     n = len(y.permutation)
 
     for i in range(n - 1):
@@ -59,13 +60,14 @@ def next_swap(f : MixedFunction, x : Solution):
             y.permutation[i], y.permutation[j] = y.permutation[j], y.permutation[i]
             y.value, y.c_value, y.p_value, y.comp_p_value = f.evaluate(y, c_value=y.c_value)
             
-            if y.comp_p_value > x.comp_p_value:
-               return y
+            if y.comp_p_value > k.comp_p_value:
+               k = copy.deepcopy(y)
+               k.print(num_evals, "P")
             else:
                 # undoing the change to no copy the solution again
                 y.permutation[i], y.permutation[j] = y.permutation[j], y.permutation[i]
     
-    return y
+    return k
 
 def change_permutation(x: Solution):
     return np.random.permutation(x.permutation)
@@ -85,7 +87,7 @@ def numerical_gradient(fobj: MixedFunction, x: Solution, epsilon=1e-6):
         grad[i] = (ev_x1 - ev_x2) / Decimal(2 * epsilon)
     return grad
 
-def continuos_step(objective: MixedFunction, x: Solution, step =1e-3, num_steps = 100):
+def continuos_step(objective: MixedFunction, x: Solution, num_evals: int, step =1e-3, num_steps = 100):
     y = copy.deepcopy(x)
     k = copy.deepcopy(x)
     n_steps = 0
@@ -100,6 +102,8 @@ def continuos_step(objective: MixedFunction, x: Solution, step =1e-3, num_steps 
             break
         else:
             y = copy.deepcopy(k)
+    
+    y.print(num_evals, "C")
 
     return y
 
@@ -118,11 +122,15 @@ def random_continuos_reposition(x:Solution):
 
     return candidate
 
-def step(objective: MixedFunction , x: Solution, next) -> Solution:
-    # solve until rech a local minimum
-    y = continuos_step(objective, x)
+def step(objective: MixedFunction , x: Solution, next, num_evals) -> Solution:
     
-    p = next(objective, y)
+    x.print(num_evals, objective.first_step)
+    if objective.first_step == "C":
+        y = continuos_step(objective, x, num_evals)
+        p = next(objective, y, num_evals)
+    else:
+        y = next(objective, x, num_evals)
+        p = continuos_step(objective, y, num_evals)
 
     return p
 
@@ -153,7 +161,7 @@ def solve(fobj: MixedFunction, x: Solution, next, maxeval=50):
         samples_p[-1].append(x.p_value)
 
         while num_evals <= maxeval:
-            y = step(fobj, x, next)
+            y = step(fobj, x, next, num_evals)
 
             if y.value < x.value or ((y.c_value == x.c_value) and (y.comp_p_value > x.comp_p_value)):
                 x = y
@@ -174,8 +182,6 @@ def solve(fobj: MixedFunction, x: Solution, next, maxeval=50):
                 samples[-1].append(x.value)
                 samples_q[-1].append(x.c_value)
                 samples_p[-1].append(x.p_value)
-            
-            print(f"{num_evals}&{x.continuos}&{x.permutation}&{float(x.c_value):.6f}&{float(x.p_value):.6f}&{float(x.value):.6f}+")
 
         return history, samples, samples_p, samples_q
 
