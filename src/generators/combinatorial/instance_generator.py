@@ -93,7 +93,6 @@ def _create_permutations(permutation_size: int, number_of_optimas: int, distance
             for c in consensus_permutations:
                 if dist_cal(elements, c) <= min_dist:
                     posicioned_dist = False
-                    print(elements,dist_cal(elements, c), min_dist)
                     break
             
             if posicioned_dist:
