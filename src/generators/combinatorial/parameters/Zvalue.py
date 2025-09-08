@@ -26,6 +26,17 @@ def zi(n, thetai, typeDistance):
              # Python: (n-i)*(exp((-1)*(thetai[i-1])))
             psiTotal = psiTotal * (1 + (n-i) * (math.exp((-1)*thetai[i-1])))
 
+    elif typeDistance == "H":
+        facts_ = np.array([1, 1] + [0]*(n-1), dtype=float)
+
+        for i in range(2, n+1):
+            facts_[i] = facts_[i-1] * i
+        sum = 0
+        for i in range(n+1):
+            sum += (((np.exp(thetai[0])-1)**i)/facts_[i])
+
+        psiTotal = sum * np.exp(-n * thetai[0])*facts_[ n ]
+
     return psiTotal
 
 # Corresponds to Zvalue.R

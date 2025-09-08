@@ -1,10 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import itertools
-from scipy.stats import kendalltau
+from src.generators.combinatorial.distances import kendall, caylley, hamming
 from .parameters import Zvalue
 from .parameters import LinearProg
-import copy
 from decimal import Decimal, getcontext
 from typing import Tuple, List
 
@@ -13,9 +12,22 @@ getcontext().prec = 100
 import matplotlib
 matplotlib.use('Agg')
 
-def _generate_difficult_thetas(permutation_size, number_of_optimas, distance = "K"):
-    small_range = (np.log(permutation_size - .5), 1.5*np.log(permutation_size - .5))
-    normal_range = (2 * np.log(permutation_size - 1), 3*np.log(permutation_size - 1))
+def get_ranges_by_distance(distance: str, permutation_size: int):
+    small_range = None
+    normal_range = None
+
+    if distance == "K":
+        small_range = (np.log(permutation_size - .5), 1.5*np.log(permutation_size - .5))
+        normal_range = (2 * np.log(permutation_size - 1), 3*np.log(permutation_size - 1))
+    else:
+        small_range = (2*np.log(permutation_size - 0.33), 2.5*np.log(permutation_size - 1))
+        normal_range = (3*np.log(permutation_size - 1), 6*np.log(permutation_size - 1))
+    
+    return small_range, normal_range
+
+
+def _generate_difficult_thetas(permutation_size, number_of_optimas, distance):
+    small_range, normal_range = get_ranges_by_distance(distance, permutation_size)
     num_cols = permutation_size - 1
     thetas_matrix = np.zeros((number_of_optimas, num_cols))
 
@@ -29,11 +41,11 @@ def _generate_difficult_thetas(permutation_size, number_of_optimas, distance = "
 
     return thetas_matrix
 
-def _generate_easy_thetas(permutation_size, number_of_optimas):
-    small_range = (np.log(permutation_size - .5), 1.5 * np.log(permutation_size - .5))
-    normal_range = (2 * np.log(permutation_size - 0.5), 3*np.log(permutation_size - 1))
+def _generate_easy_thetas(permutation_size, number_of_optimas, distance):
+    small_range, normal_range = get_ranges_by_distance(distance, permutation_size)
     num_cols = permutation_size - 1 
     thetas_matrix = np.zeros((number_of_optimas, num_cols))
+
     for i in range(number_of_optimas):
         if i == 0:
             theta_0 = np.random.uniform(*small_range)
@@ -41,81 +53,50 @@ def _generate_easy_thetas(permutation_size, number_of_optimas):
         else:
             theta_i = np.random.uniform(*normal_range)
             thetas_matrix[i,:] = theta_i
+        
     return thetas_matrix
 
 def _calculate_kendall_tau_distances(permutations):
         reference_permutation = permutations[0]
-        distances = []
-        n = len(reference_permutation)
-
-        # The maximum possible number of pairs for a permutation of length n
-        max_possible_pairs = n * (n - 1) / 2
-
-        # Iterate through the permutations starting from the second one
-        for i in range(0, len(permutations)):
-            current_permutation = permutations[i]
-
-            # Calculate the Kendall tau correlation coefficient
-            tau, _ = kendalltau(reference_permutation, current_permutation)
-
-            # Convert the Kendall tau coefficient to the number of discordant pairs (distance)
-            # Formula: discordant_pairs = (1 - tau) * (N * (N - 1) / 2) / 2
-            discordant_pairs = (1 - tau) * max_possible_pairs / 2
-            distances.append(round(discordant_pairs))  # Round to nearest integer
-
-        return distances
-
-def cayley(p1, p2):
-        # Convert permutations to cycles
-        n = len(p1)
-        visited = [False] * n
-        cycles = 0
-        # Map values to indices for p2
-        pos = {val: idx for idx, val in enumerate(p2)}
-        for i in range(n):
-            if not visited[i]:
-                cycles += 1
-                j = i
-                while not visited[j]:
-                    visited[j] = True
-                    j = pos[p1[j]]
-        return n - cycles
+        return [kendall(reference_permutation, perm) for perm in permutations]
 
 def _calculate_cayley_distances(permutations):
-    """
-    Calculates the Cayley distance between the first permutation and all others.
-    Cayley distance is the minimum number of transpositions required to transform one permutation into another.
-    """
-
     reference_permutation = permutations[0]
-    distances = []
-    for perm in permutations:
-        dist = cayley(reference_permutation, perm)
-        distances.append(dist)
-    return distances
+    return [caylley(reference_permutation, perm) for perm in permutations]
 
-def _create_permutations(permutation_size: int, number_of_optimas: int):
+def _calculate_hamming_distances(permutations):
+    reference_permutation = permutations[0]
+    return [hamming(reference_permutation, perm) for perm in permutations]
+
+def _create_permutations(permutation_size: int, number_of_optimas: int, distance: str):
     consensus_permutations = []
     created_consensus = {}
-    n = permutation_size
-    # The maximum possible number of pairs for a permutation of length n
-    max_possible_pairs = n * (n - 1) / 2
-    space = round(np.divide(1, number_of_optimas)*max_possible_pairs)
+
+    dist_cal = None
+    min_dist = None
+    if distance == "K":
+        dist_cal = kendall
+        min_dist = 1
+    elif distance == "C":
+        dist_cal = caylley
+        min_dist = 1
+    else:
+        dist_cal = hamming
+        min_dist = 2
 
     while len(created_consensus) < number_of_optimas:
         elements = list(range(1, permutation_size + 1))
         np.random.shuffle(elements)
+        
         if str(elements) not in created_consensus:
-            should_add = True
+            posicioned_dist = True
             for c in consensus_permutations:
-                tau, _ = kendalltau(c, elements)
-                discordant_pairs = (1 - tau) * max_possible_pairs / 2
-                kd = round(discordant_pairs)
-
-                if kd < space:
-                    should_add = False
-
-            if should_add:    
+                if dist_cal(elements, c) <= min_dist:
+                    posicioned_dist = False
+                    print(elements,dist_cal(elements, c), min_dist)
+                    break
+            
+            if posicioned_dist:
                 created_consensus[str(elements)] = True
                 consensus_permutations.append(elements)
 
@@ -129,23 +110,21 @@ class Instance:
         self.zetas = zetas
         self.thetas = thetas
 
-def _create_instance(permutation_size: int, number_of_optimas: int, distance: str= 'K', typ = "max", permutations = None):
+def _create_instance(permutation_size: int, number_of_optimas: int, distance: str= 'K', typ = "max"):
 
-    if permutations is None:
-        consensus_permutations =  _create_permutations(permutation_size, number_of_optimas)
-    else:
-        consensus_permutations = copy.deepcopy(permutations)
-        np.random.shuffle(consensus_permutations)
+    consensus_permutations =  _create_permutations(permutation_size, number_of_optimas, distance)
 
     if distance == "K":
         distances = _calculate_kendall_tau_distances(consensus_permutations)
-    else:
+    elif distance == "C":
         distances = _calculate_cayley_distances(consensus_permutations)
+    elif distance == "H":
+        distances = _calculate_hamming_distances(consensus_permutations)
 
     if typ == "max":
-        thetas = _generate_easy_thetas(permutation_size, number_of_optimas)
+        thetas = _generate_easy_thetas(permutation_size, number_of_optimas, distance)
     else:
-        thetas = _generate_difficult_thetas(permutation_size, number_of_optimas)
+        thetas = _generate_difficult_thetas(permutation_size, number_of_optimas, distance)
 
     zeta = Zvalue.Zvalue(permutation_size, number_of_optimas, thetas, distance)
 
@@ -155,16 +134,6 @@ def _create_instance(permutation_size: int, number_of_optimas: int, distance: st
 
     return Instance(consensus_permutations, solution, zeta, thetas)
 
-def kendall(perm1, perm2) -> int:
-    n = len(perm1)
-    max_possible_pairs = n * (n - 1) / 2
-
-    tau, _ = kendalltau(perm1, perm2)
-
-    discordant_pairs = np.multiply((1 - tau)/2, max_possible_pairs)
-        
-    return round(discordant_pairs)
-
 
 class Permutation:
 
@@ -173,10 +142,13 @@ class Permutation:
         self.number_of_optimas = number_of_optimas
         self.distance = distance
         self.difficult = difficult
+        self.calc_distance = kendall
         if distance == "K":
             self.calc_distance = kendall
-        else:
-            self.calc_distance = cayley
+        elif distance == "C":
+            self.calc_distance = caylley
+        elif distance == "H":
+            self.calc_distance == hamming
         pass
 
     def create_parameters(self):
@@ -185,12 +157,12 @@ class Permutation:
         elif self.difficult == "H":
             self.calc_parameters_difficult()
 
-    def calc_parameters_easy(self, permutations = None):
-        instance_parameters = _create_instance(self.permutation_size, self.number_of_optimas, self.distance, typ="max", permutations = permutations)
+    def calc_parameters_easy(self):
+        instance_parameters = _create_instance(self.permutation_size, self.number_of_optimas, self.distance, typ="max")
         self._extract_parameters(instance_parameters)
 
-    def calc_parameters_difficult(self, permutations = None):
-        instance_parameters = _create_instance(self.permutation_size, self.number_of_optimas, self.distance, typ="min", permutations = permutations)
+    def calc_parameters_difficult(self):
+        instance_parameters = _create_instance(self.permutation_size, self.number_of_optimas, self.distance, typ="min")
         self._extract_parameters(instance_parameters)
 
     def _extract_parameters(self, instance_parameters):
@@ -245,7 +217,7 @@ class Permutation:
         perm_values = []
         for perm in all_perms:
             value = f(np.array(perm))
-            perm_values.append((perm, value))
+            perm_values.append((perm, value[1]))
 
         # Do NOT sort by value; keep in crescent permutation order
         x_vals = list(range(len(perm_values)))

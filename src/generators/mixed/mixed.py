@@ -1,7 +1,7 @@
 from src.generators.combinatorial.instance_generator import Permutation, ZetaPermutation
 from src.generators.continuos.instance_generator import QuadraticFunction
 import numpy as np
-from typing import Dict, List
+from typing import Dict
 from decimal import Decimal, getcontext
 
 getcontext().prec = 100
