@@ -89,25 +89,44 @@ class MixedFunction:
 class QuadraticLandscapeByMallows:
     name = "qlm"
     log = False
-    permutation: Permutation
+    permutation: ZetaPermutation
     continuos: Dict[int, QuadraticFunction]
+    first_step = "P"
 
-    def calculate_parameters(self, continuos_dimension = 2, permutation_size = 5, number_of_minimas = 5, distance = "K"):
-        self.permutation = Permutation(permutation_size, number_of_minimas, distance)
-        self.permutation.calc_parameters_easy()
+    def calculate_parameters(self, continuos_dimension = 2, permutation_size = 5, continuos_minima = 2, permutation_minima = 2, distance = "K", difficult="E"):
+        self.permutation = ZetaPermutation()
+        self.permutation.caculate_parameters(permutation_size, permutation_minima, distance, difficult)
 
         self.continuos = {}
         self.minimas = []
-        for consensus in self.permutation.consensus:
-            value, i = self.permutation.evaluate_and_get_index(consensus)
-            minimas_ = [value + 2 * np.random.rand()  for _ in range(number_of_minimas-1)]
-            minimas_.append(value)
-            self.continuos[i] = QuadraticFunction(dimension=continuos_dimension, numberOfLocalMinima=len(minimas_), minimas=minimas_)
-            self.minimas.append(value**2)
+        
+        for i, optimum in enumerate(self.permutation.optima):
+            self.continuos[i] = QuadraticFunction(dimension=continuos_dimension, 
+                                                  numberOfLocalMinima=continuos_minima, 
+                                                  minima_proximity=10, 
+                                                  global_minimum=float(optimum))
+        
+        self.minimas = []
+
+        for i, p in enumerate(self.permutation.optima):
+            for c in self.continuos[i].minimas:
+                self.minimas.append(p * Decimal(c))
+        
+        pass
+
+    def transform(self, discret, continuos) -> Decimal:
+        return Decimal(discret) * Decimal(continuos)
 
     def evaluate(self, x: Solution, c_value = None, p_value = None):
-        p_value, i = self.permutation.evaluate_and_get_index(x.permutation)
+        p_value, ln_value, i = self.permutation.evaluate_and_get_index(x.permutation)
         
         c_value = self.continuos[i].evaluate(x.continuos)
 
-        return np.multiply(c_value, p_value), c_value, p_value
+        return self.transform(p_value, c_value), c_value, p_value, ln_value
+    
+    
+    def log_info(self):
+        print(f"{self.continuos[0].dimension}&{self.continuos[0].numberOfLocalMinima}&{self.permutation.permutation.permutation_size}&{self.permutation.permutation.number_of_optimas}&{self.permutation.permutation.distance}&{self.permutation.permutation.difficult}+")
+        for p, p_optimum in enumerate(self.permutation.optima):
+            for c, c_optimum in enumerate(self.continuos[p].minimas):
+                print(f"{self.continuos[p].p_list[c]}&{self.permutation.permutation.consensus[p]}&{c_optimum:.6}&{p_optimum:.6}&{self.transform(p_optimum,c_optimum):.6}+")

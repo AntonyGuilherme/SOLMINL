@@ -172,7 +172,7 @@ class Permutation:
         self.global_optimum: float = np.divide(self.weights[0], self.zetas[0])
         self.optima : List[float] = [self.weights[i] / zeta for i, zeta in enumerate(self.zetas)]
 
-    def evaluate(self, perm: np.ndarray) -> float:
+    def evaluate(self, perm: np.ndarray) -> Tuple[float, float]:
         value = Decimal(0)
         comp_value = Decimal(-float('inf'))
 
@@ -190,21 +190,23 @@ class Permutation:
         return value, comp_value
     
     def evaluate_and_get_index(self, perm: np.ndarray):
-        value = 0
+        value = Decimal(0)
+        ln_value = Decimal(-float('inf'))
         k = 0
 
         for i in range(self.number_of_optimas):
             distance = self.calc_distance(self.consensus[i], perm)
-
-            mallows_value = np.divide(
-                np.multiply(self.weights[i], np.exp(-distance * self.thetas[i])),
-                self.zetas[i])
+            weight_normalized = Decimal(self.weights[i]/self.zetas[i])
             
-            if value < mallows_value:
+            mallows_value = Decimal(weight_normalized * Decimal(np.exp(-distance * self.thetas[i])))
+            ln_mallows_value = np.log(self.weights[i]/self.zetas[i]) - distance*self.thetas[i]
+
+            if  ln_mallows_value > ln_value:
                 value = mallows_value
+                ln_value = ln_mallows_value
                 k = i
 
-        return value, k
+        return value, ln_value, k
 
 
     def plot(self, output_path, f=None, solver_steps=None):
@@ -306,13 +308,11 @@ class ZetaPermutation:
 
     
     def evaluate(self, perm: np.ndarray) -> Tuple[float, float]:
-
         value, ln_value = self.permutation.evaluate(perm)
 
         return self.transform(value), ln_value
     
     def evaluate_and_get_index(self, perm: np.ndarray):
-        value, i = self.permutation.evaluate_and_get_index(perm)
-        value_normalized = np.divide(value, self.permutation.global_optimum)
+        value, ln_value, i = self.permutation.evaluate_and_get_index(perm)
 
-        return np.subtract(2, value_normalized), i
+        return self.transform(value), ln_value, i

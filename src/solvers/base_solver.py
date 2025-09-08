@@ -1,4 +1,4 @@
-from src.generators.mixed.mixed import MixedFunction, Solution, MixIndependentFunction, Permutation
+from src.generators.mixed.mixed import MixedFunction, Solution, MixIndependentFunction, QuadraticLandscapeByMallows
 import numpy as np
 import copy
 from .utils import plot_optimization_histories, plot_samples, plot_samples_with_ci
@@ -187,7 +187,8 @@ def solve(fobj: MixedFunction, x: Solution, next, maxeval=50):
 
 
 objective_functions = {
-    'mif': MixIndependentFunction()
+    'mif': MixIndependentFunction(),
+    'qlm': QuadraticLandscapeByMallows()
 }
 
 strategies = {
