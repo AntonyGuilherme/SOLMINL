@@ -18,4 +18,4 @@ run(continuos_dimension=continuos_dimension,
     difficulty=difficulty,
     next=strategie,
     objective=objective_function,
-    attempts=2)
+    attempts=30)
