@@ -89,6 +89,18 @@ class QuadraticFunction:
                 value = partial_value
             
         return value
+    
+    def evaluate_and_get_index(self, x):
+        value: float = sys.float_info.max
+        k = 0
+        for i, m in enumerate(self.minimas):
+            diff = x - self.p_list[i]
+            partial_value: float = diff.T @ self.B_inv_list[i] @ diff + m
+            if value > partial_value:
+                value = partial_value
+                k = i
+            
+        return value, k
 
     def visualize(self, xlim=(0, 1), ylim=(0, 1), grid_points=200, show_minima=True):
         """

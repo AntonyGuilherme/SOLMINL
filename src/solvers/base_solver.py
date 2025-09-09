@@ -1,4 +1,4 @@
-from src.generators.mixed.mixed import MixedFunction, Solution, MixIndependentFunction, QuadraticLandscapeByMallows
+from src.generators.mixed.mixed import MixedFunction, Solution, MixIndependentFunction, QuadraticLandscapeByMallows, ZetaByQuadraticLandscapeSection
 import numpy as np
 import copy
 from .utils import plot_optimization_histories, plot_samples, plot_samples_with_ci
@@ -126,7 +126,7 @@ def random_continuos_reposition(x:Solution):
 def step(objective: MixedFunction , x: Solution, next, num_evals, strategy, log:bool) -> Solution:
     
     if log:
-        x.print(num_evals, objective.first_step)
+        x.print(num_evals, strategy)
 
     if strategy == "C":
         y = continuos_step(objective, x, num_evals= num_evals, log= log)
@@ -162,9 +162,9 @@ def select_solver_strategy(f: MixedFunction, x: Solution, next) -> str:
         else:
             continuos_strategy += 1
         
-        if continuos_strategy >= 10:
+        if continuos_strategy >= 5:
             return "C"
-        if discret_strategy >= 10:
+        if discret_strategy >= 5:
             return "P"
 
 def solve(fobj: MixedFunction, x: Solution, next, strategy = "C", maxeval=50, log = True):
@@ -190,7 +190,7 @@ def solve(fobj: MixedFunction, x: Solution, next, strategy = "C", maxeval=50, lo
         while num_evals <= maxeval:
             y = step(fobj, x, next, num_evals, strategy= strategy, log=log)
 
-            if y.value < x.value or y.comp_p_value > x.comp_p_value:
+            if y.value < x.value or (y.value == x.value and y.comp_p_value > x.comp_p_value):
                 x = y
                 history.append(x.value)
                 samples[-1].append(x.value)
@@ -251,7 +251,7 @@ dimensions = [2]
 sizes = [5]
 distances = ["K"]
 nexts = [next_swap]
-objectives = [QuadraticLandscapeByMallows()]
+objectives = [ZetaByQuadraticLandscapeSection(), QuadraticLandscapeByMallows(), MixIndependentFunction()]
 number_of_evaluations_for_each_experiment = 100
 number_of_continuos_minima = 2
 number_of_permutation_minima = sizes[0]
@@ -285,20 +285,20 @@ for dimension in dimensions:
                             ["QUADRATIC"],
                             best_possible=objective_function.minimas,
                             output_path=os.path.join(folder_name, f"historic.png"),
-                            log=False
+                            log=True
                         )
 
                         plot_samples(
                             samples, 
                             output=os.path.join(folder_name, f"samples.png"), 
                             best_possible=objective_function.minimas,
-                            log=objective_function.log
+                            log=True
                         )
 
                         plot_samples_with_ci(
                             [samples_p, samples_q], 
                             "Quadratic and Permutation Evolution", 
                             subtitle=["Permutation", "Quadratic"],
-                            log=objective_function.log,
+                            log=True,
                             output=os.path.join(folder_name, f"ie.png")
                         )

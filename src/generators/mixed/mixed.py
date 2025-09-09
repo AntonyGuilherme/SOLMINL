@@ -1,7 +1,7 @@
 from src.generators.combinatorial.instance_generator import Permutation, ZetaPermutation
 from src.generators.continuos.instance_generator import QuadraticFunction
 import numpy as np
-from typing import Dict
+from typing import Dict, List
 from decimal import Decimal, getcontext
 
 getcontext().prec = 100
@@ -66,7 +66,6 @@ class MixedFunction:
     permutation: Permutation
     continuos: QuadraticFunction
     name = "mf"
-    log = True
 
     def calculate_parameters(self, continuos_dimension = 2, permutation_size = 5, number_of_minimas = 5, distance = "K"):
         self.permutation = Permutation(permutation_size, number_of_minimas, distance)
@@ -88,10 +87,8 @@ class MixedFunction:
 
 class QuadraticLandscapeByMallows:
     name = "qlm"
-    log = False
     permutation: ZetaPermutation
     continuos: Dict[int, QuadraticFunction]
-    first_step = "P"
 
     def calculate_parameters(self, continuos_dimension = 2, permutation_size = 5, continuos_minima = 2, permutation_minima = 2, distance = "K", difficult="E"):
         self.permutation = ZetaPermutation()
@@ -130,3 +127,51 @@ class QuadraticLandscapeByMallows:
         for p, p_optimum in enumerate(self.permutation.optima):
             for c, c_optimum in enumerate(self.continuos[p].minimas):
                 print(f"{self.continuos[p].p_list[c]}&{self.permutation.permutation.consensus[p]}&{c_optimum:.6}&{p_optimum:.6}&{self.transform(p_optimum,c_optimum):.6}+")
+
+
+class ZetaByQuadraticLandscapeSection:
+    name = "zqs"
+    permutation: ZetaPermutation
+    continuos: QuadraticFunction
+
+    def calculate_parameters(self, continuos_dimension = 2, permutation_size = 5, continuos_minima = 2, permutation_minima = 2, distance = "K", difficult="E"):
+        self.discrets: List[ZetaPermutation] = [] 
+        
+        for i in range(continuos_minima):
+            self.discrets.append(ZetaPermutation())
+            self.discrets[-1].caculate_parameters(permutation_size=permutation_size, 
+                                                  number_of_minimas=permutation_minima, 
+                                                  distance = distance, 
+                                                  difficult= difficult)
+        
+        self.discrets.sort(key=lambda x: x.optima[0])
+
+        self.continuos = QuadraticFunction(dimension=continuos_dimension, 
+                                           numberOfLocalMinima=continuos_minima, 
+                                           minima_proximity=10, 
+                                           global_minimum=float(self.discrets[0].optima[0]))
+
+        self.minimas = []
+
+        for i, c in enumerate(self.continuos.minimas):
+            for d in self.discrets[i].optima:
+                self.minimas.append(d * Decimal(c))
+        
+        pass
+
+    def transform(self, discret, continuos) -> Decimal:
+        return Decimal(discret) * Decimal(continuos)
+
+    def evaluate(self, x: Solution, c_value = None, p_value = None):
+        c_value, i = self.continuos.evaluate_and_get_index(x.continuos)
+        p_value, ln_value = self.discrets[i].evaluate(x.permutation)
+
+        return self.transform(p_value, c_value), c_value, p_value, ln_value
+    
+    
+    def log_info(self):
+        print(f"{self.continuos.dimension}&{self.continuos.numberOfLocalMinima}&{self.discrets[0].permutation.permutation_size}&{self.discrets[0].permutation.number_of_optimas}&{self.discrets[0].permutation.distance}&{self.discrets[0].permutation.difficult}+")
+        
+        for i, c in enumerate(self.continuos.minimas):
+            for j, p in enumerate(self.discrets[i].optima):
+                print(f"{self.continuos.p_list[i]}&{self.discrets[i].permutation.consensus[j]}&{c:.6}&{p:.6}&{self.transform(p,c):.6}+")
