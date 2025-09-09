@@ -49,7 +49,7 @@ def next_swap_invertion(f: MixedFunction, x: Solution):
 
     return y
 
-def next_swap(f : MixedFunction, x : Solution, num_evals:int):
+def next_swap(f : MixedFunction, x : Solution, num_evals:int, log = True):
     y = copy.deepcopy(x)
     k = x
     n = len(y.permutation)
@@ -60,8 +60,9 @@ def next_swap(f : MixedFunction, x : Solution, num_evals:int):
             y.value, y.c_value, y.p_value, y.comp_p_value = f.evaluate(y, c_value=y.c_value)
             
             if y.comp_p_value > k.comp_p_value:
-               k = copy.deepcopy(y)
-               k.print(num_evals, "P")
+                k = copy.deepcopy(y)
+                if log:
+                    k.print(num_evals, "P")
             else:
                 # undoing the change to no copy the solution again
                 y.permutation[i], y.permutation[j] = y.permutation[j], y.permutation[i]
@@ -86,7 +87,7 @@ def numerical_gradient(fobj: MixedFunction, x: Solution, epsilon=1e-6):
         grad[i] = (ev_x1 - ev_x2) / Decimal(2 * epsilon)
     return grad
 
-def continuos_step(objective: MixedFunction, x: Solution, num_evals: int, step =1e-3, num_steps = 100):
+def continuos_step(objective: MixedFunction, x: Solution, num_evals: int, step =1e-3, num_steps = 100, log = True):
     y = copy.deepcopy(x)
     k = copy.deepcopy(x)
     n_steps = 0
@@ -102,7 +103,8 @@ def continuos_step(objective: MixedFunction, x: Solution, num_evals: int, step =
         else:
             y = copy.deepcopy(k)
     
-    y.print(num_evals, "C")
+    if log:
+        y.print(num_evals, "C")
 
     return y
 
@@ -121,15 +123,17 @@ def random_continuos_reposition(x:Solution):
 
     return candidate
 
-def step(objective: MixedFunction , x: Solution, next, num_evals) -> Solution:
+def step(objective: MixedFunction , x: Solution, next, num_evals, strategy, log:bool) -> Solution:
     
-    x.print(num_evals, objective.first_step)
-    if objective.first_step == "C":
-        #y = continuos_step(objective, x, num_evals)
-        p = next(objective, x, num_evals)
+    if log:
+        x.print(num_evals, objective.first_step)
+
+    if strategy == "C":
+        y = continuos_step(objective, x, num_evals= num_evals, log= log)
+        p = next(objective, x, num_evals = num_evals, log = log)
     else:
-        y = next(objective, x, num_evals)
-        p = continuos_step(objective, y, num_evals)
+        y = next(objective, x, num_evals, log = log)
+        p = continuos_step(objective, y, num_evals = num_evals, log = log)
 
     return p
 
@@ -139,7 +143,31 @@ def change(objective: MixedFunction, x: Solution):
     x.value, x.c_value, x.p_value, x.comp_p_value = objective.evaluate(x)
     pass
 
-def solve(fobj: MixedFunction, x: Solution, next, maxeval=50):
+def select_solver_strategy(f: MixedFunction, x: Solution, next) -> str:
+    _, samplesC, _, _ = solve(f, x, next, maxeval= 10, strategy= "C", log = False)
+    _, samplesP, _, _ = solve(f, x, next,  maxeval= 10, strategy= "P", log = False)
+
+    results = []
+    for i, sc in enumerate(samplesC):
+        results.append((sc[-1],"C"))
+        results.append((samplesP[i][-1],"P"))
+
+    results.sort(key=lambda x: x[0])
+
+    continuos_strategy = 0
+    discret_strategy = 0
+    for r in results:
+        if r[1] == "P":
+            discret_strategy += 1
+        else:
+            continuos_strategy += 1
+        
+        if continuos_strategy >= 10:
+            return "C"
+        if discret_strategy >= 10:
+            return "P"
+
+def solve(fobj: MixedFunction, x: Solution, next, strategy = "C", maxeval=50, log = True):
         """
         Args:
             *change_nbg*: It is a callback function that will be call whenever a better solution is not found.
@@ -160,9 +188,9 @@ def solve(fobj: MixedFunction, x: Solution, next, maxeval=50):
         samples_p[-1].append(x.p_value)
 
         while num_evals <= maxeval:
-            y = step(fobj, x, next, num_evals)
+            y = step(fobj, x, next, num_evals, strategy= strategy, log=log)
 
-            if y.value < x.value or ((y.c_value == x.c_value) and (y.comp_p_value > x.comp_p_value)):
+            if y.value < x.value or y.comp_p_value > x.comp_p_value:
                 x = y
                 history.append(x.value)
                 samples[-1].append(x.value)
@@ -184,6 +212,10 @@ def solve(fobj: MixedFunction, x: Solution, next, maxeval=50):
 
         return history, samples, samples_p, samples_q
 
+def define_strategy_and_solve(fobj: MixedFunction, x: Solution, next, maxeval=50):
+    strategy = select_solver_strategy(fobj, x, next)
+
+    return solve(fobj, x, next, strategy, maxeval, log = True)
 
 objective_functions = {
     'mif': MixIndependentFunction(),
@@ -212,16 +244,16 @@ def run(continuos_dimension: int, permutation_size: int, difficulty: str, distan
     x = Solution(dimension=continuos_dimension, permutation_size=permutation_size)
     x.value, x.c_value, x.p_value, x.comp_p_value = objective_function.evaluate(x)
 
-    solve(objective_function, x, next=next_str, maxeval=attempts)
+    define_strategy_and_solve(objective_function, x, next=next_str, maxeval=attempts)
     pass
 
 dimensions = [2]
-sizes = [30]
+sizes = [5]
 distances = ["K"]
 nexts = [next_swap]
-objectives = [MixIndependentFunction()]
-number_of_evaluations_for_each_experiment = 5
-number_of_continuos_minima = 10
+objectives = [QuadraticLandscapeByMallows()]
+number_of_evaluations_for_each_experiment = 100
+number_of_continuos_minima = 2
 number_of_permutation_minima = sizes[0]
 
 for dimension in dimensions:
@@ -240,10 +272,10 @@ for dimension in dimensions:
                         x = Solution(dimension=dimension, permutation_size=permutation_size)
                         x.value, x.c_value, x.p_value, x.comp_p_value = objective_function.evaluate(x)
                         
-                        historic, samples, samples_p, samples_q = solve(objective_function, x, next=next, maxeval=number_of_evaluations_for_each_experiment)
+                        historic, samples, samples_p, samples_q = define_strategy_and_solve(objective_function, x, next=next, maxeval=number_of_evaluations_for_each_experiment)
 
                         #Create a folder for the current configuration
-                        folder_name = f"{objective_function.name}_{dimension}_{permutation_size}_{next.__name__}"
+                        folder_name = f"{objective_function.name}_{dimension}_{permutation_size}_{next.__name__}{distance}"
                         os.makedirs(folder_name, exist_ok=True)
 
 
