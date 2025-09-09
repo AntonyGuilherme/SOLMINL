@@ -125,8 +125,8 @@ def step(objective: MixedFunction , x: Solution, next, num_evals) -> Solution:
     
     x.print(num_evals, objective.first_step)
     if objective.first_step == "C":
-        y = continuos_step(objective, x, num_evals)
-        p = next(objective, y, num_evals)
+        #y = continuos_step(objective, x, num_evals)
+        p = next(objective, x, num_evals)
     else:
         y = next(objective, x, num_evals)
         p = continuos_step(objective, y, num_evals)
@@ -162,7 +162,7 @@ def solve(fobj: MixedFunction, x: Solution, next, maxeval=50):
         while num_evals <= maxeval:
             y = step(fobj, x, next, num_evals)
 
-            if (y.value < x.value) or (y.comp_p_value > x.comp_p_value):
+            if y.value < x.value or ((y.c_value == x.c_value) and (y.comp_p_value > x.comp_p_value)):
                 x = y
                 history.append(x.value)
                 samples[-1].append(x.value)
@@ -217,11 +217,11 @@ def run(continuos_dimension: int, permutation_size: int, difficulty: str, distan
 
 dimensions = [2]
 sizes = [30]
-distances = ["H"]
+distances = ["K"]
 nexts = [next_swap]
 objectives = [MixIndependentFunction()]
 number_of_evaluations_for_each_experiment = 5
-number_of_continuos_minima = 2
+number_of_continuos_minima = 10
 number_of_permutation_minima = sizes[0]
 
 for dimension in dimensions:

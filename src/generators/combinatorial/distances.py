@@ -8,7 +8,7 @@ def kendall(perm1: List[int], perm2: List[int]) -> int:
     tau, _ = kendalltau(perm1, perm2)
     discordant_pairs = (1 - tau) * max_possible_pairs / 2
         
-    return int(discordant_pairs)
+    return round(discordant_pairs)
 
 def caylley(perm1: List[int], perm2: List[int]) -> int:
     n = len(perm1)

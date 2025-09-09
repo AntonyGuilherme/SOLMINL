@@ -90,10 +90,10 @@ def _create_permutations(permutation_size: int, number_of_optimas: int, distance
         
         if str(elements) not in created_consensus:
             posicioned_dist = True
-            # for c in consensus_permutations:
-            #     if dist_cal(elements, c) <= min_dist:
-            #         posicioned_dist = False
-            #         break
+            for c in consensus_permutations:
+                if dist_cal(elements, c) <= min_dist:
+                    posicioned_dist = False
+                    break
             
             if posicioned_dist:
                 created_consensus[str(elements)] = True
