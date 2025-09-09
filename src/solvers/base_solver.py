@@ -162,7 +162,7 @@ def solve(fobj: MixedFunction, x: Solution, next, maxeval=50):
         while num_evals <= maxeval:
             y = step(fobj, x, next, num_evals)
 
-            if y.value < x.value or y.comp_p_value > x.comp_p_value:
+            if (y.value < x.value) or (y.comp_p_value > x.comp_p_value):
                 x = y
                 history.append(x.value)
                 samples[-1].append(x.value)
@@ -216,10 +216,10 @@ def run(continuos_dimension: int, permutation_size: int, difficulty: str, distan
     pass
 
 dimensions = [2]
-sizes = [15]
-distances = ["C"]
+sizes = [30]
+distances = ["H"]
 nexts = [next_swap]
-objectives = [QuadraticLandscapeByMallows()]
+objectives = [MixIndependentFunction()]
 number_of_evaluations_for_each_experiment = 5
 number_of_continuos_minima = 2
 number_of_permutation_minima = sizes[0]

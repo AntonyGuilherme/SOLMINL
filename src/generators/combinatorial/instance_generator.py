@@ -34,10 +34,10 @@ def _generate_difficult_thetas(permutation_size, number_of_optimas, distance):
     for i in range(number_of_optimas):
         if i == 1:
             theta_i = np.random.uniform(*small_range)
-            thetas_matrix[i, :] = theta_i
         else:
             theta_i = np.random.uniform(*normal_range)
-            thetas_matrix[i, :] = theta_i
+        
+        thetas_matrix[i, :] = theta_i
 
     return thetas_matrix
 
@@ -48,11 +48,11 @@ def _generate_easy_thetas(permutation_size, number_of_optimas, distance):
 
     for i in range(number_of_optimas):
         if i == 0:
-            theta_0 = np.random.uniform(*small_range)
-            thetas_matrix[i,:] = theta_0
+            theta_i = np.random.uniform(*small_range)
         else:
             theta_i = np.random.uniform(*normal_range)
-            thetas_matrix[i,:] = theta_i
+
+        thetas_matrix[i,:] = theta_i
         
     return thetas_matrix
 
@@ -90,10 +90,10 @@ def _create_permutations(permutation_size: int, number_of_optimas: int, distance
         
         if str(elements) not in created_consensus:
             posicioned_dist = True
-            for c in consensus_permutations:
-                if dist_cal(elements, c) <= min_dist:
-                    posicioned_dist = False
-                    break
+            # for c in consensus_permutations:
+            #     if dist_cal(elements, c) <= min_dist:
+            #         posicioned_dist = False
+            #         break
             
             if posicioned_dist:
                 created_consensus[str(elements)] = True
@@ -141,13 +141,13 @@ class Permutation:
         self.number_of_optimas = number_of_optimas
         self.distance = distance
         self.difficult = difficult
-        self.calc_distance = kendall
-        if distance == "K":
+
+        if self.distance == "K":
             self.calc_distance = kendall
-        elif distance == "C":
+        elif self.distance == "C":
             self.calc_distance = caylley
-        elif distance == "H":
-            self.calc_distance == hamming
+        else:
+            self.calc_distance = hamming
         pass
 
     def create_parameters(self):

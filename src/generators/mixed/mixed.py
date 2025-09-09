@@ -10,6 +10,7 @@ class Solution:
     def __init__(self, dimension = 2, permutation_size = 5):
         self.continuos = [np.random.rand() for _ in range(dimension)]
         self.permutation = list(range(1, permutation_size + 1))
+        np.random.shuffle(self.permutation)
         self.value = 0.0
         self.c_value = 0.0
         self.p_value = 0.0
@@ -31,14 +32,13 @@ class MixIndependentFunction:
         self.permutation = ZetaPermutation()
         self.permutation.caculate_parameters(permutation_size, permutation_minima, distance, difficult)
         
-        permutation_minima = [self.permutation.evaluate(consensus)  for consensus in self.permutation.permutation.consensus]
         self.continuos = QuadraticFunction(dimension=continuos_dimension, numberOfLocalMinima= continuos_minima, minima_proximity=10)
 
         self.minimas = []
 
-        for i, minimum_i in enumerate(permutation_minima):
-            for j , minimum_j in enumerate(self.continuos.minimas):
-                self.minimas.append(np.multiply(minimum_i[0], Decimal(minimum_j)))
+        for minimum_i in self.permutation.optima:
+            for minimum_j in self.continuos.minimas:
+                self.minimas.append(np.multiply(minimum_i, Decimal(minimum_j)))
         pass
 
     def transform(self, discret, continuos) -> Decimal:
@@ -58,7 +58,7 @@ class MixIndependentFunction:
         print(f"{self.continuos.dimension}&{self.continuos.numberOfLocalMinima}&{self.permutation.permutation.permutation_size}&{self.permutation.permutation.number_of_optimas}&{self.permutation.permutation.distance}&{self.permutation.permutation.difficult}+")
         for p, p_optimum in enumerate(self.permutation.optima):
             for c, c_optimum in enumerate(self.continuos.minimas):
-                print(f"{self.continuos.p_list[c]}&{self.permutation.permutation.consensus[p]}&{c_optimum:.6}&{p_optimum:.6}&{self.transform(p_optimum,c_optimum):.6}+")
+                print(f"{self.continuos.p_list[c]}&{self.permutation.permutation.consensus[p]}&{c_optimum:.6}&{p_optimum:.6}&{self.transform(p_optimum,c_optimum):.6}&{np.log(float(p_optimum))}+")
                 
 
 
