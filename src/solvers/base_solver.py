@@ -1,8 +1,9 @@
-from src.generators.mixed import Solution, MixOfIndependentSpaces, SingleDiscretMultipleContinuos, SingleContinuosMultipleDiscret
+from src.generators.mixed import Solution, MixOfIndependentSpaces, SingleDiscretMultipleContinuos, SingleContinuosMultipleDiscret, ObjectiveFunction
 import numpy as np
 import copy
 from .utils import plot_optimization_histories, plot_samples, plot_samples_with_ci
 from decimal import Decimal, getcontext
+from typing import List
 import os
 
 getcontext().prec = 100
@@ -49,7 +50,7 @@ def next_swap_invertion(f, x: Solution):
 
     return y
 
-def next_swap(f, x : Solution, num_evals:int, log = True):
+def next_swap(f: ObjectiveFunction, x : Solution, num_evals:int, log = True):
     y = copy.deepcopy(x)
     k = x
     n = len(y.permutation)
@@ -57,7 +58,7 @@ def next_swap(f, x : Solution, num_evals:int, log = True):
     for i in range(n - 1):
         for j in range(i+1, n):
             y.permutation[i], y.permutation[j] = y.permutation[j], y.permutation[i]
-            y.value, y.c_value, y.p_value, y.comp_p_value = f.evaluate(y, c_value=y.c_value)
+            f.evaluate(y, fixContinuosValue=True)
             
             if y.comp_p_value > k.comp_p_value:
                 k = copy.deepcopy(y)
@@ -72,7 +73,7 @@ def next_swap(f, x : Solution, num_evals:int, log = True):
 def change_permutation(x: Solution):
     return np.random.permutation(x.permutation)
 
-def numerical_gradient(fobj, x: Solution, epsilon=1e-6):
+def numerical_gradient(fobj: ObjectiveFunction, x: Solution, epsilon=1e-6):
     grad = np.zeros_like(x.continuos)
     y = copy.deepcopy(x)
     for i in range(len(x.continuos)):
@@ -81,13 +82,15 @@ def numerical_gradient(fobj, x: Solution, epsilon=1e-6):
         x1[i] += epsilon
         x2[i] -= epsilon
         y.continuos = x1
-        ev_x1, _, _,_ = fobj.evaluate(y, p_value=y.p_value)
+        fobj.evaluate(y, fixDiscretValue=True)
+        ev_x1 = y.value
         y.continuos = x2
-        ev_x2, _, _, _ = fobj.evaluate(y, p_value=y.p_value)
+        fobj.evaluate(y, fixDiscretValue=True)
+        ev_x2 = y.value
         grad[i] = (ev_x1 - ev_x2) / Decimal(2 * epsilon)
     return grad
 
-def continuos_step(objective, x: Solution, num_evals: int, step =1e-3, num_steps = 100, log = True):
+def continuos_step(objective: ObjectiveFunction, x: Solution, num_evals: int, step =1e-3, num_steps = 100, log = True):
     y = copy.deepcopy(x)
     k = copy.deepcopy(x)
     n_steps = 0
@@ -96,7 +99,7 @@ def continuos_step(objective, x: Solution, num_evals: int, step =1e-3, num_steps
         grad = numerical_gradient(objective, k)
         k.continuos = k.continuos - step * grad
         k.continuos = np.clip(k.continuos, 0.0, 1.0)
-        k.value, k.c_value, k.p_value, k.comp_p_value = objective.evaluate(k, p_value=k.p_value)
+        objective.evaluate(k, fixDiscretValue= True)
         
         if (k.value + Decimal(1e-5)) > y.value:
             break
@@ -123,7 +126,7 @@ def random_continuos_reposition(x:Solution):
 
     return candidate
 
-def step(objective, x: Solution, next, num_evals, strategy, log:bool) -> Solution:
+def step(objective: ObjectiveFunction, x: Solution, next, num_evals, strategy, log:bool) -> Solution:
     
     if log:
         x.print(num_evals, strategy)
@@ -137,10 +140,10 @@ def step(objective, x: Solution, next, num_evals, strategy, log:bool) -> Solutio
 
     return p
 
-def change(objective, x: Solution):
+def change(objective: ObjectiveFunction, x: Solution):
     x.permutation = change_permutation(x)
     x.continuos = random_continuos_reposition(x)
-    x.value, x.c_value, x.p_value, x.comp_p_value = objective.evaluate(x)
+    objective.evaluate(x)
     pass
 
 def select_solver_strategy(f, x: Solution, next) -> str:
@@ -167,7 +170,7 @@ def select_solver_strategy(f, x: Solution, next) -> str:
         if discret_strategy >= 5:
             return "P"
 
-def solve(fobj, x: Solution, next, strategy = "C", maxeval=50, log = True):
+def solve(fobj: ObjectiveFunction, x: Solution, next, strategy = "C", maxeval=50, log = True):
         """
         Args:
             *change_nbg*: It is a callback function that will be call whenever a better solution is not found.
@@ -212,7 +215,7 @@ def solve(fobj, x: Solution, next, strategy = "C", maxeval=50, log = True):
 
         return history, samples, samples_p, samples_q
 
-def define_strategy_and_solve(fobj, x: Solution, next, maxeval=50):
+def define_strategy_and_solve(fobj: ObjectiveFunction, x: Solution, next, maxeval=50):
     strategy = select_solver_strategy(fobj, x, next)
 
     return solve(fobj, x, next, strategy, maxeval, log = True)
@@ -243,7 +246,7 @@ def run(continuos_dimension: int, permutation_size: int, difficulty: str, distan
     objective_function.log_info()
                         
     x = Solution(dimension=continuos_dimension, permutation_size=permutation_size)
-    x.value, x.c_value, x.p_value, x.comp_p_value = objective_function.evaluate(x)
+    objective_function.evaluate(x)
 
     define_strategy_and_solve(objective_function, x, next=next_str, maxeval=attempts)
     pass
@@ -252,8 +255,11 @@ dimensions = [2]
 sizes = [5]
 distances = ["K"]
 nexts = [next_swap]
-objectives = [SingleDiscretMultipleContinuos(), SingleContinuosMultipleDiscret(), MixOfIndependentSpaces()]
-number_of_evaluations_for_each_experiment = 30
+objectives: List[ObjectiveFunction] = [
+    SingleDiscretMultipleContinuos(), 
+    SingleContinuosMultipleDiscret(), 
+    MixOfIndependentSpaces()]
+number_of_evaluations_for_each_experiment = 1
 number_of_continuos_minima = 2
 number_of_permutation_minima = sizes[0]
 
@@ -262,16 +268,16 @@ for dimension in dimensions:
             for distance in distances:
                 for next in nexts:
                     for objective_function in objectives:
-                        objective_function.calculate_parameters(continuos_dimension=dimension, 
-                                                                permutation_size=permutation_size, 
-                                                                continuos_minima=number_of_continuos_minima, 
-                                                                permutation_minima=number_of_permutation_minima,
+                        objective_function.defineDomains(continuosDimension=dimension, 
+                                                                discretDimension=permutation_size, 
+                                                                numberOfContinuosMinima=number_of_continuos_minima, 
+                                                                numberOfDiscretMinima=number_of_permutation_minima,
                                                                 distance=distance,
                                                                 difficult="H")
                         
-                        objective_function.log_info()
+                        objective_function.log()
                         x = Solution(dimension=dimension, permutation_size=permutation_size)
-                        x.value, x.c_value, x.p_value, x.comp_p_value = objective_function.evaluate(x)
+                        objective_function.evaluate(x)
                         
                         historic, samples, samples_p, samples_q = define_strategy_and_solve(objective_function, x, next=next, maxeval=number_of_evaluations_for_each_experiment)
 
@@ -284,7 +290,7 @@ for dimension in dimensions:
                         plot_optimization_histories(
                             [historic], 
                             ["QUADRATIC"],
-                            best_possible=objective_function.minimas,
+                            best_possible=objective_function.optima,
                             output_path=os.path.join(folder_name, f"historic.png"),
                             log=True
                         )
@@ -292,7 +298,7 @@ for dimension in dimensions:
                         plot_samples(
                             samples, 
                             output=os.path.join(folder_name, f"samples.png"), 
-                            best_possible=objective_function.minimas,
+                            best_possible=objective_function.optima,
                             log=True
                         )
 

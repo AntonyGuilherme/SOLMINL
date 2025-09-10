@@ -3,48 +3,53 @@ from src.generators.continuos.instance_generator import QuadraticFunction
 from src.generators.mixed.solution import Solution
 from decimal import Decimal, getcontext
 from typing import Dict
+from src.generators.mixed.objectiveFunction import ObjectiveFunction
 
 getcontext().prec = 100
 
-class SingleDiscretMultipleContinuos:
-    name = "qlm"
-    permutation: ZetaPermutation
-    continuos: Dict[int, QuadraticFunction]
+class SingleDiscretMultipleContinuos(ObjectiveFunction):
+    _discret: ZetaPermutation
+    _continuos: Dict[int, QuadraticFunction]
 
-    def calculate_parameters(self, continuos_dimension = 2, permutation_size = 5, continuos_minima = 2, permutation_minima = 2, distance = "K", difficult="E"):
-        self.permutation = ZetaPermutation()
-        self.permutation.caculate_parameters(permutation_size, permutation_minima, distance, difficult)
+    def __init__(self):
+        super().__init__()
+        self.name = "SDMC"
 
-        self.continuos = {}
-        self.minimas = []
+
+    def defineDomains(self, continuosDimension: int = 2,
+                        numberOfContinuosMinima: int = 2, 
+                        discretDimension: int = 5, 
+                        numberOfDiscretMinima: int = 2, 
+                        distance = "K", 
+                        difficult="E"):
+        self._discret = ZetaPermutation()
+        self._discret.caculate_parameters(discretDimension, numberOfDiscretMinima, distance, difficult)
+
+        self._continuos = {}
+        self.optima = []
         
-        for i, optimum in enumerate(self.permutation.optima):
-            self.continuos[i] = QuadraticFunction(dimension=continuos_dimension, 
-                                                  numberOfLocalMinima=continuos_minima, 
+        for i, optimum in enumerate(self._discret.optima):
+            self._continuos[i] = QuadraticFunction(dimension=continuosDimension, 
+                                                  numberOfLocalMinima=numberOfContinuosMinima, 
                                                   minima_proximity=10, 
                                                   global_minimum=float(optimum))
-        
-        self.minimas = []
 
-        for i, p in enumerate(self.permutation.optima):
-            for c in self.continuos[i].minimas:
-                self.minimas.append(p * Decimal(c))
+        for i, p in enumerate(self._discret.optima):
+            for c in self._continuos[i].minimas:
+                self.optima.append(self.transform(p,c))
         
         pass
 
-    def transform(self, discret, continuos) -> Decimal:
-        return Decimal(discret) * Decimal(continuos)
+    def evaluate(self, x: Solution, fixContinuosValue: bool = False, fixDiscretValue: bool = False) -> None:
+        x.p_value, x.comp_p_value, i = self._discret.evaluate_and_get_index(x.permutation)
+        x.c_value = self._continuos[i].evaluate(x.continuos)
+        x.value = self.transform(x.p_value, x.c_value)
 
-    def evaluate(self, x: Solution, c_value = None, p_value = None):
-        p_value, ln_value, i = self.permutation.evaluate_and_get_index(x.permutation)
-        
-        c_value = self.continuos[i].evaluate(x.continuos)
-
-        return self.transform(p_value, c_value), c_value, p_value, ln_value
+        pass
     
     
-    def log_info(self):
-        print(f"{self.continuos[0].dimension}&{self.continuos[0].numberOfLocalMinima}&{self.permutation.permutation.permutation_size}&{self.permutation.permutation.number_of_optimas}&{self.permutation.permutation.distance}&{self.permutation.permutation.difficult}+")
-        for p, p_optimum in enumerate(self.permutation.optima):
-            for c, c_optimum in enumerate(self.continuos[p].minimas):
-                print(f"{self.continuos[p].p_list[c]}&{self.permutation.permutation.consensus[p]}&{c_optimum:.6}&{p_optimum:.6}&{self.transform(p_optimum,c_optimum):.6}+")
+    def log(self) -> None:
+        print(f"{self._continuos[0].dimension}&{self._continuos[0].numberOfLocalMinima}&{self._discret.permutation.permutation_size}&{self._discret.permutation.number_of_optimas}&{self._discret.permutation.distance}&{self._discret.permutation.difficult}+")
+        for p, p_optimum in enumerate(self._discret.optima):
+            for c, c_optimum in enumerate(self._continuos[p].minimas):
+                print(f"{self._continuos[p].p_list[c]}&{self._discret.permutation.consensus[p]}&{c_optimum:.6}&{p_optimum:.6}&{self.transform(p_optimum,c_optimum):.6}+")
