@@ -1,4 +1,4 @@
-from src.generators.combinatorial.instance_generator import Permutation
+from src.generators.discret.instance_generator import Permutation
 import numpy as np
 import copy
 import matplotlib.pyplot as plt

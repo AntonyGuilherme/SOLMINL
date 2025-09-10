@@ -1,7 +1,5 @@
 import numpy as np
-import matplotlib.pyplot as plt
-import itertools
-from src.generators.combinatorial.distances import kendall, caylley, hamming
+from src.generators.discret.distances import kendall, caylley, hamming
 from .parameters import normalizationConstants
 from .parameters import linearProblem
 from decimal import Decimal, getcontext
@@ -207,85 +205,6 @@ class Permutation:
                 k = i
 
         return value, ln_value, k
-
-
-    def plot(self, output_path, f=None, solver_steps=None):
-        all_perms = list(itertools.permutations(range(1, self.permutation_size + 1)))
-
-        if f is None:
-            f = self.evaluate
-        # Evaluate all permutations and store their values and labels
-        perm_values = []
-        for perm in all_perms:
-            value = f(np.array(perm))
-            perm_values.append((perm, value[1]))
-
-        # Do NOT sort by value; keep in crescent permutation order
-        x_vals = list(range(len(perm_values)))
-        y_vals = [v for _, v in perm_values]
-
-        # Find indices of consensus permutations in the permutation order
-        consensus_indices = []
-        consensus_values = []
-        consensus_labels = []
-        for consensus in self.consensus:
-            for idx, (perm, value) in enumerate(perm_values):
-                if np.array_equal(np.array(perm), np.array(consensus)):
-                    consensus_indices.append(idx)
-                    consensus_values.append(value)
-                    consensus_labels.append(str(list(consensus)))
-                    break
-
-        # Calculate average value
-        avg_value = np.mean(y_vals)
-
-        plt.figure(figsize=(14, 6))
-        plt.plot(x_vals, y_vals, marker='o', linestyle='-', color='skyblue', label='All Permutations')
-        plt.scatter(consensus_indices, [y_vals[i] for i in consensus_indices], color='red', marker='x', s=100, label='Consensus')
-
-        # Add labels to consensus points
-        for idx, label in zip(consensus_indices, consensus_labels):
-            plt.annotate(label, (idx, y_vals[idx]), textcoords="offset points", xytext=(0,10), ha='center', fontsize=9, color='red')
-
-        plt.axhline(avg_value, color='green', linestyle='--', label=f'Average Value: {avg_value:.4f}')
-
-        # Plot solver steps if provided
-        if solver_steps is not None:
-            step_indices = []
-            step_values = []
-            step_labels = []
-            n = 0
-            for step in solver_steps:
-                n += 1
-                # Convert step.solution to a list of Python ints for comparison
-                step_solution = [int(x) for x in step.solution]
-                found = False
-                for idx, (perm, value) in enumerate(perm_values):
-                    if list(perm) == step_solution:
-                        step_indices.append(idx)
-                        step_values.append(step.single_objective_value)
-                        step_labels.append(str(n)+"-"+str(step_solution))
-                        found = True
-                        break
-                if not found:
-                    print(f"Warning: Solution step {step.solution} not found among permutations.")
-            if step_indices:
-                plt.scatter(step_indices, step_values, color='orange', marker='D', s=80, label='Solver Steps')
-                for idx, label, val in zip(step_indices, step_labels, step_values):
-                    plt.annotate(label, (idx, val), textcoords="offset points", xytext=(0,-15), ha='center', fontsize=8, color='orange')
-            else:
-                print("No solver steps matched any permutation.")
-
-        plt.xticks([])
-        plt.xlabel("Permutation Index (lexicographic order)")
-        plt.ylabel("Evaluated Value (log scale)")
-        plt.title("Permutation Values (Lexicographic Order) with Consensus and Solver Steps")
-        plt.grid(True, linestyle="--", alpha=0.5)
-        #plt.yscale('log')
-        plt.legend()
-        plt.tight_layout()
-        plt.savefig(output_path)
-
 
 class ZetaPermutation:
     permutation: Permutation

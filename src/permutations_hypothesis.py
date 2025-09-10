@@ -1,4 +1,4 @@
-from generators.combinatorial.instance_generator import Permutation, _create_permutations
+from generators.discret.instance_generator import Permutation, _create_permutations
 import time
 import numpy as np
 

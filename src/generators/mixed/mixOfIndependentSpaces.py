@@ -1,4 +1,4 @@
-from src.generators.combinatorial.instance_generator import ZetaPermutation
+from src.generators.discret.instance_generator import ZetaPermutation
 from src.generators.continuos.multiQuadratic import MultiQuadratic
 from src.generators.mixed.solution import Solution
 from src.generators.mixed.objectiveFunction import ObjectiveFunction
