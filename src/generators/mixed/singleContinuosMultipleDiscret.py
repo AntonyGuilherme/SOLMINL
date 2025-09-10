@@ -1,5 +1,5 @@
 from src.generators.combinatorial.instance_generator import ZetaPermutation
-from src.generators.continuos.instance_generator import QuadraticFunction
+from src.generators.continuos.multiQuadratic import MultiQuadratic
 from src.generators.mixed.solution import Solution
 from decimal import Decimal, getcontext
 from src.generators.mixed.objectiveFunction import ObjectiveFunction
@@ -11,7 +11,7 @@ getcontext().prec = 100
 
 class SingleContinuosMultipleDiscret(ObjectiveFunction):
     _discrets: List[ZetaPermutation]
-    _continuos: QuadraticFunction
+    _continuos: MultiQuadratic
 
     def __init__(self):
         super().__init__()
@@ -34,14 +34,14 @@ class SingleContinuosMultipleDiscret(ObjectiveFunction):
         
         self._discrets.sort(key=lambda x: x.optima[0])
 
-        self._continuos = QuadraticFunction(dimension=continuosDimension, 
+        self._continuos = MultiQuadratic(dimension=continuosDimension, 
                                            numberOfLocalMinima=numberOfContinuosMinima, 
-                                           minima_proximity=10, 
-                                           global_minimum=float(self._discrets[0].optima[0]))
+                                           minimaProximity=10, 
+                                           globalMinimum=float(self._discrets[0].optima[0]))
 
         self.optima = []
 
-        for i, c in enumerate(self._continuos.minimas):
+        for i, c in enumerate(self._continuos.minima):
             for d in self._discrets[i].optima:
                 self.optima.append(self.transform(d,c))
         pass
@@ -50,7 +50,7 @@ class SingleContinuosMultipleDiscret(ObjectiveFunction):
         return Decimal(discret) * Decimal(continuos)
 
     def evaluate(self, x: Solution, fixContinuosValue: bool = False, fixDiscretValue: bool = False):
-        x.c_value, i = self._continuos.evaluate_and_get_index(x.continuos)
+        x.c_value, i = self._continuos.evaluateAndGetComponentPosition(x.continuos)
         x.p_value, x.comp_p_value = self._discrets[i].evaluate(x.permutation)
         x.value = self.transform(x.c_value, x.p_value)
         pass
@@ -59,6 +59,6 @@ class SingleContinuosMultipleDiscret(ObjectiveFunction):
     def log(self):
         print(f"{self.name}&{self._continuos.dimension}&{self._continuos.numberOfLocalMinima}&{self._discrets[0].permutation.permutation_size}&{self._discrets[0].permutation.number_of_optimas}&{self._discrets[0].permutation.distance}&{self._discrets[0].permutation.difficult}+")
         
-        for i, c in enumerate(self._continuos.minimas):
+        for i, c in enumerate(self._continuos.minima):
             for j, p in enumerate(self._discrets[i].optima):
-                print(f"{self._continuos.p_list[i]}&{self._discrets[i].permutation.consensus[j]}&{c:.6}&{p:.6}&{self.transform(p,c):.6}+")
+                print(f"{self._continuos.minimaPositions[i]}&{self._discrets[i].permutation.consensus[j]}&{c:.6}&{p:.6}&{self.transform(p,c):.6}+")

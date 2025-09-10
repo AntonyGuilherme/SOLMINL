@@ -1,4 +1,4 @@
-from src.generators.continuos.instance_generator import QuadraticFunction
+from src.generators.continuos.multiQuadratic import MultiQuadratic
 from .utils import Solution, solve, plot_optimization_histories, plot_samples
 import numpy as np
 import copy
@@ -48,19 +48,19 @@ def random_continuos_reposition(f, x, epslon=1e-6):
     x.single_objective_value = f.evaluate(x.solution)
 
 
-objective = QuadraticFunction(numberOfLocalMinima=4)
+objective = MultiQuadratic(numberOfLocalMinima=4)
 
 base = Solution()
 base.solution = np.zeros(objective.dimension)
 base.single_objective_value = objective.evaluate(base.solution)
 historic, samples = solve(objective, base, change_nbg=random_continuos_reposition, next = continuos_step)
 
-print(objective.minimas)
+print(objective.minima)
 
 plot_optimization_histories(
              [historic], 
              ["QUADRATIC"],
-             best_possible=[min(objective.minimas)],
+             best_possible=[min(objective.minima)],
              output_path=f"historic_q.png")
 
 plot_samples(samples)
