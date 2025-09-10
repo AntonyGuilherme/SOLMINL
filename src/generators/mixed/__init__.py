@@ -1,0 +1,4 @@
+from src.generators.mixed.solution import Solution
+from src.generators.mixed.mixOfIndependentSpaces import MixOfIndependentSpaces
+from src.generators.mixed.singleContinuosMultipleDiscret import SingleContinuosMultipleDiscret
+from src.generators.mixed.singleDiscretMultipleContinuos import SingleDiscretMultipleContinuos

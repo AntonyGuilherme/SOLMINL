@@ -1,4 +1,4 @@
-from src.generators.mixed.mixed import MixedFunction, Solution, MixIndependentFunction, QuadraticLandscapeByMallows, ZetaByQuadraticLandscapeSection
+from src.generators.mixed import Solution, MixOfIndependentSpaces, SingleDiscretMultipleContinuos, SingleContinuosMultipleDiscret
 import numpy as np
 import copy
 from .utils import plot_optimization_histories, plot_samples, plot_samples_with_ci
@@ -9,7 +9,7 @@ getcontext().prec = 100
 
 np.random.seed(91)
 
-def next_swap_close(f: MixedFunction, x: Solution):
+def next_swap_close(f, x: Solution):
     y = copy.deepcopy(x)
     n = len(y.permutation)
 
@@ -25,7 +25,7 @@ def next_swap_close(f: MixedFunction, x: Solution):
 
     return y
 
-def next_swap_invertion(f: MixedFunction, x: Solution):
+def next_swap_invertion(f, x: Solution):
     y = copy.deepcopy(x)
     n = len(y.permutation)
     # same computational cost as copy the invertion
@@ -49,7 +49,7 @@ def next_swap_invertion(f: MixedFunction, x: Solution):
 
     return y
 
-def next_swap(f : MixedFunction, x : Solution, num_evals:int, log = True):
+def next_swap(f, x : Solution, num_evals:int, log = True):
     y = copy.deepcopy(x)
     k = x
     n = len(y.permutation)
@@ -72,7 +72,7 @@ def next_swap(f : MixedFunction, x : Solution, num_evals:int, log = True):
 def change_permutation(x: Solution):
     return np.random.permutation(x.permutation)
 
-def numerical_gradient(fobj: MixedFunction, x: Solution, epsilon=1e-6):
+def numerical_gradient(fobj, x: Solution, epsilon=1e-6):
     grad = np.zeros_like(x.continuos)
     y = copy.deepcopy(x)
     for i in range(len(x.continuos)):
@@ -87,7 +87,7 @@ def numerical_gradient(fobj: MixedFunction, x: Solution, epsilon=1e-6):
         grad[i] = (ev_x1 - ev_x2) / Decimal(2 * epsilon)
     return grad
 
-def continuos_step(objective: MixedFunction, x: Solution, num_evals: int, step =1e-3, num_steps = 100, log = True):
+def continuos_step(objective, x: Solution, num_evals: int, step =1e-3, num_steps = 100, log = True):
     y = copy.deepcopy(x)
     k = copy.deepcopy(x)
     n_steps = 0
@@ -123,7 +123,7 @@ def random_continuos_reposition(x:Solution):
 
     return candidate
 
-def step(objective: MixedFunction , x: Solution, next, num_evals, strategy, log:bool) -> Solution:
+def step(objective, x: Solution, next, num_evals, strategy, log:bool) -> Solution:
     
     if log:
         x.print(num_evals, strategy)
@@ -137,13 +137,13 @@ def step(objective: MixedFunction , x: Solution, next, num_evals, strategy, log:
 
     return p
 
-def change(objective: MixedFunction, x: Solution):
+def change(objective, x: Solution):
     x.permutation = change_permutation(x)
     x.continuos = random_continuos_reposition(x)
     x.value, x.c_value, x.p_value, x.comp_p_value = objective.evaluate(x)
     pass
 
-def select_solver_strategy(f: MixedFunction, x: Solution, next) -> str:
+def select_solver_strategy(f, x: Solution, next) -> str:
     _, samplesC, _, _ = solve(f, x, next, maxeval= 10, strategy= "C", log = False)
     _, samplesP, _, _ = solve(f, x, next,  maxeval= 10, strategy= "P", log = False)
 
@@ -167,7 +167,7 @@ def select_solver_strategy(f: MixedFunction, x: Solution, next) -> str:
         if discret_strategy >= 5:
             return "P"
 
-def solve(fobj: MixedFunction, x: Solution, next, strategy = "C", maxeval=50, log = True):
+def solve(fobj, x: Solution, next, strategy = "C", maxeval=50, log = True):
         """
         Args:
             *change_nbg*: It is a callback function that will be call whenever a better solution is not found.
@@ -212,14 +212,15 @@ def solve(fobj: MixedFunction, x: Solution, next, strategy = "C", maxeval=50, lo
 
         return history, samples, samples_p, samples_q
 
-def define_strategy_and_solve(fobj: MixedFunction, x: Solution, next, maxeval=50):
+def define_strategy_and_solve(fobj, x: Solution, next, maxeval=50):
     strategy = select_solver_strategy(fobj, x, next)
 
     return solve(fobj, x, next, strategy, maxeval, log = True)
 
 objective_functions = {
-    'mif': MixIndependentFunction(),
-    'qlm': QuadraticLandscapeByMallows()
+    'mif': MixOfIndependentSpaces(),
+    'scmd': SingleContinuosMultipleDiscret(),
+    'sdmc': SingleDiscretMultipleContinuos()
 }
 
 strategies = {
@@ -251,8 +252,8 @@ dimensions = [2]
 sizes = [5]
 distances = ["K"]
 nexts = [next_swap]
-objectives = [ZetaByQuadraticLandscapeSection(), QuadraticLandscapeByMallows(), MixIndependentFunction()]
-number_of_evaluations_for_each_experiment = 100
+objectives = [SingleDiscretMultipleContinuos(), SingleContinuosMultipleDiscret(), MixOfIndependentSpaces()]
+number_of_evaluations_for_each_experiment = 30
 number_of_continuos_minima = 2
 number_of_permutation_minima = sizes[0]
 
