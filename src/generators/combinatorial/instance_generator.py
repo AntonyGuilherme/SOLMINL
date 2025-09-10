@@ -2,8 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import itertools
 from src.generators.combinatorial.distances import kendall, caylley, hamming
-from .parameters import Zvalue
-from .parameters import LinearProg
+from .parameters import normalizationConstants
+from .parameters import linearProblem
 from decimal import Decimal, getcontext
 from typing import Tuple, List
 
@@ -125,9 +125,9 @@ def _create_instance(permutation_size: int, number_of_optimas: int, distance: st
     else:
         thetas = _generate_difficult_thetas(permutation_size, number_of_optimas, distance)
 
-    zeta = Zvalue.Zvalue(permutation_size, number_of_optimas, thetas, distance)
+    zeta = normalizationConstants.Zvalue(permutation_size, number_of_optimas, thetas, distance)
 
-    instance_parameters = LinearProg.LinearProg(permutation_size, number_of_optimas, thetas, distances, typ, zeta)
+    instance_parameters = linearProblem.defineDiscretFunctionParameters(permutation_size, number_of_optimas, thetas, distances, typ, zeta)
 
     solution = np.array([instance_parameters.x[i].value for i in range(number_of_optimas)])
 

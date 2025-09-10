@@ -1,42 +1,36 @@
 import math
 import numpy as np
-import random # For runif equivalent
+import random 
 from pyomo.environ import *
 
-# Helper function to create the model based on the R script's sparse matrix
+# This functions defines the constraints
 def _create_glpk_pyomo_model(m, zeta, thetas_min_val):
     model = ConcreteModel()
 
-    # 1. Decision Variables (m variables, 0-indexed)
+    # Decision Variables (m variables, 0-indexed)
     model.x = Var(range(m), domain=NonNegativeReals, bounds=(0, None))
     for i in range(m):
+        # defines the upper bound
         model.x[i].setub(50 * zeta[i])
 
-    # 2. Constraints (m constraints, 0-indexed)
-    # Reconstruct ia, ja, ar as per R code, but 0-indexed for Python
+    # Constraints (m constraints, 0-indexed)
 
-    # R's ia: c(1,m,1,rep(2:(m-1),each=2),m)
-    # Python's ia (0-indexed):
-    py_ia = [0, m-1, 0] # First three elements: row 0, row m-1, row 0 (for second term of first constraint)
-    for i in range(1, m-1): # R's 2:(m-1) corresponds to Python's 1:(m-2)
-        py_ia.extend([i, i]) # Each 'i' is repeated twice for row index
+    py_ia = [0, m-1, 0]
+    for i in range(1, m-1):
+        py_ia.extend([i, i])
 
     if m > 1: # Add the last 'm' from R's ia if m > 1
         py_ia.append(m-1)
 
-    # R's ja: rep(1:m,each=2)
-    # Python's ja (0-indexed):
     py_ja = []
     for i in range(m): # R's 1:m
         py_ja.extend([i, i]) # Each 'i' is repeated twice for column index
 
-    # R's ar (coefficients):
     py_ar = []
     py_ar.append(1/zeta[0]) # R: 1/zeta[1]
     py_ar.append(-1/zeta[0]) # R: -1/zeta[1] (This is for the term in the last constraint involving x[0])
     
     # This loop generates coefficients for rows 2 to m-1 (R indexing)
-    # R: for (i in 2:(m-1)){ ar=c(ar,-1/zeta[i]); ar=c(ar,1/zeta[i]) }
     for i in range(1, m-1): # Python indices 1 to m-2 correspond to R's 2 to m-1
         py_ar.append(-1/zeta[i])
         py_ar.append(1/zeta[i])
@@ -64,12 +58,11 @@ def _create_glpk_pyomo_model(m, zeta, thetas_min_val):
 
     return model
 
-# Corresponds to MaxGO.R
+# define the maximation objective function
+# this problem defines the easy set of problems
 def MaxGO(m, zeta, thetas):
     model = _create_glpk_pyomo_model(m, zeta, np.min(thetas)) # Pass the min value from the entire thetas matrix
 
-    # R: obj[1]=1/zeta[1]; obj[2]=-1/zeta[2]
-    # Python (0-indexed): obj[0]=1/zeta[0]; obj[1]=-1/zeta[1]
     obj_expr = (1/zeta[0]) * model.x[0]
     if m >= 2:
         obj_expr -= (1/zeta[1]) * model.x[1]
@@ -77,12 +70,11 @@ def MaxGO(m, zeta, thetas):
     model.objective = Objective(expr=obj_expr, sense=maximize)
     return model
 
-# Corresponds to MinGO.R
+# define the minimization objective function
+# this problem defines the difficulty set of problem for the discret domain
 def MinGO(distances, m, zeta, thetas):
     model = _create_glpk_pyomo_model(m, zeta, np.min(thetas))
 
-    # R: obj[1]=1/zeta[1]
-    # R: for (rest_ind in 2:m){ obj[rest_ind]=-exp(-max(thetas[rest_ind,])*(distances[rest_ind]+1))/((m-1)*zeta[rest_ind]) }
     obj_expr = (1/zeta[0]) * model.x[0]
     if m > 1:
       for rest_ind in range(1, m): # Python indices 1 to m-1
@@ -93,40 +85,26 @@ def MinGO(distances, m, zeta, thetas):
     model.objective = Objective(expr=obj_expr, sense=minimize)
     return model
 
-# Corresponds to SimAB.R
-def SimAB(m, zeta, thetas):
-    model = _create_glpk_pyomo_model(m, zeta, np.min(thetas))
 
-    # R: obj[1]=1/zeta[1]; obj[m]=-1/zeta[m]
-    # Python (0-indexed): obj[0]=1/zeta[0]; obj[m-1]=-1/zeta[m-1]
-    obj_expr = (1/zeta[0]) * model.x[0] - (1/zeta[m-1]) * model.x[m-1]
-
-    model.objective = Objective(expr=obj_expr, sense=minimize)
-    return model
-
-
-# Corresponds to select_func.R
+# defining objective function
 def select_func(G, distances, m, zeta, thetas):
     if G == 'max':
         return MaxGO(m, zeta, thetas)
     elif G == 'min':
         return MinGO(distances, m, zeta, thetas)
-    elif G == 'sim':
-        return SimAB(m, zeta, thetas)
     else:
         raise ValueError("Invalid G parameter. Must be 'max', 'min', or 'sim'.")
 
 
-# Corresponds to LinearProg.R
-def LinearProg(n, m, thetas, distances, G, zeta):
-    lp_model = select_func(G, distances, m, zeta, thetas)
+def defineDiscretFunctionParameters(n, m, thetas, distances, G, zeta):
+    linearProblem = select_func(G, distances, m, zeta, thetas)
 
     # Solve the model using GLPK
     solver = SolverFactory('glpk')
-    results = solver.solve(lp_model,  tee=False)
+    results = solver.solve(linearProblem,  tee=False)
 
     if (results.solver.status != SolverStatus.ok) or \
        (results.solver.termination_condition != TerminationCondition.optimal):
         print(f"Warning: Solver did not find an optimal solution. Status: {results.solver.status}, Termination: {results.solver.termination_condition}")
 
-    return lp_model
+    return linearProblem
