@@ -1,4 +1,4 @@
-from src.generators.discret.instance_generator import ZetaPermutation
+from src.generators.discret.multiMallowsDiscret import NormalizedDiscret
 from src.generators.continuos.multiQuadratic import MultiQuadratic
 from src.generators.mixed.solution import Solution
 from src.generators.mixed.objectiveFunction import ObjectiveFunction
@@ -8,7 +8,7 @@ import numpy as np
 getcontext().prec = 100
 
 class MixOfIndependentSpaces(ObjectiveFunction):
-    _discret: ZetaPermutation
+    _discret: NormalizedDiscret
     _continuos: MultiQuadratic
     
     def __init__(self):
@@ -16,8 +16,8 @@ class MixOfIndependentSpaces(ObjectiveFunction):
         self.name = "MIF"
 
     def defineDomains(self, continuosDimension: int = 2, numberOfContinuosMinima: int = 2, discretDimension: int = 5, numberOfDiscretMinima: int = 2, distance = "K", difficult="E") -> None:
-        self._discret = ZetaPermutation()
-        self._discret.caculate_parameters(discretDimension, numberOfDiscretMinima, distance, difficult)
+        self._discret = NormalizedDiscret()
+        self._discret.createParameters(discretDimension, numberOfDiscretMinima, distance, difficult)
         
         self._continuos = MultiQuadratic(dimension=continuosDimension, 
                                             numberOfLocalMinima= numberOfContinuosMinima, 
@@ -42,10 +42,10 @@ class MixOfIndependentSpaces(ObjectiveFunction):
     pass
     
     def log(self):
-        print(f"{self.name}&{self._continuos.dimension}&{self._continuos.numberOfLocalMinima}&{self._discret.permutation.permutation_size}&{self._discret.permutation.number_of_optimas}&{self._discret.permutation.distance}&{self._discret.permutation.difficult}+")
+        print(f"{self.name}&{self._continuos.dimension}&{self._continuos.numberOfLocalMinima}&{self._discret._discret.discretDimension}&{self._discret._discret.numberOfMaxima}&{self._discret._discret.distance}&{self._discret._discret.difficult}+")
         for p, p_optimum in enumerate(self._discret.optima):
             for c, c_optimum in enumerate(self._continuos.minima):
-                print(f"{self._continuos.minimaPositions[c]}&{self._discret.permutation.consensus[p]}&{c_optimum:.6}&{p_optimum:.6}&{self.transform(p_optimum,c_optimum):.6}+")
+                print(f"{self._continuos.minimaPositions[c]}&{self._discret._discret.consensus[p]}&{c_optimum:.6}&{p_optimum:.6}&{self.transform(p_optimum,c_optimum):.6}+")
 
         pass
                 

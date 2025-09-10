@@ -1,4 +1,4 @@
-from src.generators.discret.instance_generator import Permutation
+from src.generators.discret.multiMallowsDiscret import MultiMallowsDiscret
 import numpy as np
 import copy
 import matplotlib.pyplot as plt
@@ -72,7 +72,7 @@ for size in [10]:
         base.solution = list(range(1, size + 1))
         np.random.shuffle(base.solution)
 
-        permutation = Permutation(len(base.solution), 2, distance=distance) 
+        permutation = MultiMallowsDiscret(len(base.solution), 2, distance=distance) 
 
         permutation.calc_parameters_difficult()
 

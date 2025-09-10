@@ -23,7 +23,6 @@ def get_ranges_by_distance(distance: str, permutation_size: int):
     
     return small_range, normal_range
 
-
 def _generate_difficult_thetas(permutation_size, number_of_optimas, distance):
     small_range, normal_range = get_ranges_by_distance(distance, permutation_size)
     num_cols = permutation_size - 1
@@ -99,7 +98,6 @@ def _create_permutations(permutation_size: int, number_of_optimas: int, distance
 
     return consensus_permutations
 
-
 class Instance:
     def __init__(self, consensus_permutations: np.array, weights: np.array, zetas: np.array, thetas: np.array):
         self.consensus_permutations = consensus_permutations
@@ -132,20 +130,20 @@ def _create_instance(permutation_size: int, number_of_optimas: int, distance: st
     return Instance(consensus_permutations, solution, zeta, thetas)
 
 
-class Permutation:
+class MultiMallowsDiscret:
 
-    def __init__(self, permutation_size, number_of_optimas, distance="K", difficult = "E"):
-        self.permutation_size = permutation_size
-        self.number_of_optimas = number_of_optimas
+    def __init__(self, discretDimension, numberOfMaxima, distance="K", difficult = "E"):
+        self.discretDimension = discretDimension
+        self.numberOfMaxima = numberOfMaxima
         self.distance = distance
         self.difficult = difficult
 
         if self.distance == "K":
-            self.calc_distance = kendall
+            self.calcDistance = kendall
         elif self.distance == "C":
-            self.calc_distance = caylley
+            self.calcDistance = caylley
         else:
-            self.calc_distance = hamming
+            self.calcDistance = hamming
         pass
 
     def create_parameters(self):
@@ -155,11 +153,11 @@ class Permutation:
             self.calc_parameters_difficult()
 
     def calc_parameters_easy(self):
-        instance_parameters = _create_instance(self.permutation_size, self.number_of_optimas, self.distance, typ="max")
+        instance_parameters = _create_instance(self.discretDimension, self.numberOfMaxima, self.distance, typ="max")
         self._extract_parameters(instance_parameters)
 
     def calc_parameters_difficult(self):
-        instance_parameters = _create_instance(self.permutation_size, self.number_of_optimas, self.distance, typ="min")
+        instance_parameters = _create_instance(self.discretDimension, self.numberOfMaxima, self.distance, typ="min")
         self._extract_parameters(instance_parameters)
 
     def _extract_parameters(self, instance_parameters):
@@ -174,8 +172,8 @@ class Permutation:
         value = Decimal(0)
         comp_value = Decimal(-float('inf'))
 
-        for i in range(self.number_of_optimas):
-            distance = self.calc_distance(self.consensus[i], perm)
+        for i in range(self.numberOfMaxima):
+            distance = self.calcDistance(self.consensus[i], perm)
 
             weight_normalized = Decimal(self.weights[i]/self.zetas[i])
             
@@ -187,13 +185,13 @@ class Permutation:
 
         return value, comp_value
     
-    def evaluate_and_get_index(self, perm: np.ndarray):
+    def evaluateAndGetComponentIndex(self, perm: np.ndarray):
         value = Decimal(0)
         ln_value = Decimal(-float('inf'))
         k = 0
 
-        for i in range(self.number_of_optimas):
-            distance = self.calc_distance(self.consensus[i], perm)
+        for i in range(self.numberOfMaxima):
+            distance = self.calcDistance(self.consensus[i], perm)
             weight_normalized = Decimal(self.weights[i]/self.zetas[i])
             
             mallows_value = Decimal(weight_normalized * Decimal(np.exp(-distance * self.thetas[i])))
@@ -206,32 +204,32 @@ class Permutation:
 
         return value, ln_value, k
 
-class ZetaPermutation:
-    permutation: Permutation
+class NormalizedDiscret:
+    _discret: MultiMallowsDiscret
     optima: List[Decimal]
 
-    def caculate_parameters(self, permutation_size, number_of_minimas, distance = "K", difficult = "E"):
-        self.permutation = Permutation(permutation_size, number_of_minimas, distance, difficult)
-        self.permutation.create_parameters()
+    def createParameters(self, permutation_size, number_of_minimas, distance = "K", difficult = "E"):
+        self._discret = MultiMallowsDiscret(permutation_size, number_of_minimas, distance, difficult)
+        self._discret.create_parameters()
         self.optima = []
 
-        for optimum in self.permutation.optima:
+        for optimum in self._discret.optima:
             self.optima.append(self.transform(optimum))
         
         pass
 
     def transform(self, value) -> Decimal:
-        value_normalized = Decimal(value) / Decimal(self.permutation.global_optimum)
+        valueNormalized = Decimal(value) / Decimal(self._discret.global_optimum)
 
-        return Decimal(2) - Decimal(value_normalized)
+        return Decimal(2) - Decimal(valueNormalized)
 
     
     def evaluate(self, perm: np.ndarray) -> Tuple[float, float]:
-        value, ln_value = self.permutation.evaluate(perm)
+        value, ln_value = self._discret.evaluate(perm)
 
         return self.transform(value), ln_value
     
-    def evaluate_and_get_index(self, perm: np.ndarray):
-        value, ln_value, i = self.permutation.evaluate_and_get_index(perm)
+    def evaluateAndGetComponentIndex(self, perm: np.ndarray):
+        value, ln_value, i = self._discret.evaluateAndGetComponentIndex(perm)
 
         return self.transform(value), ln_value, i

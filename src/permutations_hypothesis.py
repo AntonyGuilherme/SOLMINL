@@ -1,4 +1,4 @@
-from generators.discret.instance_generator import Permutation, _create_permutations
+from src.generators.discret.multiMallowsDiscret import MultiMallowsDiscret, _create_permutations
 import time
 import numpy as np
 
@@ -9,7 +9,7 @@ normal_times = []
 bucket_times = []
 
 for permutation_size in sizes:
-    permutation = Permutation(permutation_size, permutation_size**2)
+    permutation = MultiMallowsDiscret(permutation_size, permutation_size**2)
     permutation.calc_parameters_difficult()
 
     # Time normal evaluate

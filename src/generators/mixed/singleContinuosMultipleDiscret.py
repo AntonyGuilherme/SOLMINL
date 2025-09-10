@@ -1,4 +1,4 @@
-from src.generators.discret.instance_generator import ZetaPermutation
+from src.generators.discret.multiMallowsDiscret import NormalizedDiscret
 from src.generators.continuos.multiQuadratic import MultiQuadratic
 from src.generators.mixed.solution import Solution
 from decimal import Decimal, getcontext
@@ -10,7 +10,7 @@ getcontext().prec = 100
 
 
 class SingleContinuosMultipleDiscret(ObjectiveFunction):
-    _discrets: List[ZetaPermutation]
+    _discrets: List[NormalizedDiscret]
     _continuos: MultiQuadratic
 
     def __init__(self):
@@ -26,8 +26,8 @@ class SingleContinuosMultipleDiscret(ObjectiveFunction):
         self._discrets = [] 
         
         for i in range(numberOfContinuosMinima):
-            self._discrets.append(ZetaPermutation())
-            self._discrets[-1].caculate_parameters(permutation_size=discretDimension, 
+            self._discrets.append(NormalizedDiscret())
+            self._discrets[-1].createParameters(permutation_size=discretDimension, 
                                                   number_of_minimas=numberOfDiscretMinima, 
                                                   distance = distance, 
                                                   difficult= difficult)
@@ -57,8 +57,8 @@ class SingleContinuosMultipleDiscret(ObjectiveFunction):
     
     
     def log(self):
-        print(f"{self.name}&{self._continuos.dimension}&{self._continuos.numberOfLocalMinima}&{self._discrets[0].permutation.permutation_size}&{self._discrets[0].permutation.number_of_optimas}&{self._discrets[0].permutation.distance}&{self._discrets[0].permutation.difficult}+")
+        print(f"{self.name}&{self._continuos.dimension}&{self._continuos.numberOfLocalMinima}&{self._discrets[0]._discret.discretDimension}&{self._discrets[0]._discret.numberOfMaxima}&{self._discrets[0]._discret.distance}&{self._discrets[0]._discret.difficult}+")
         
         for i, c in enumerate(self._continuos.minima):
             for j, p in enumerate(self._discrets[i].optima):
-                print(f"{self._continuos.minimaPositions[i]}&{self._discrets[i].permutation.consensus[j]}&{c:.6}&{p:.6}&{self.transform(p,c):.6}+")
+                print(f"{self._continuos.minimaPositions[i]}&{self._discrets[i]._discret.consensus[j]}&{c:.6}&{p:.6}&{self.transform(p,c):.6}+")
