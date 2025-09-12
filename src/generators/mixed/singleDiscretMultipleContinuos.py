@@ -49,7 +49,7 @@ class SingleDiscretMultipleContinuos(ObjectiveFunction):
     
     
     def log(self) -> None:
-        print(f"{self._continuos[0].dimension}&{self._continuos[0].numberOfLocalMinima}&{self._discret._discret.discretDimension}&{self._discret._discret.numberOfMaxima}&{self._discret._discret.distance}&{self._discret._discret.difficult}+")
+        print(f"{self.name}&{self._continuos[0].dimension}&{self._continuos[0].numberOfLocalMinima}&{self._discret._discret.discretDimension}&{self._discret._discret.numberOfMaxima}&{self._discret._discret.distance}&{self._discret._discret.difficult}+")
         for p, p_optimum in enumerate(self._discret.optima):
             for c, c_optimum in enumerate(self._continuos[p].minima):
                 print(f"{self._continuos[p].minimaPositions[c]}&{self._discret._discret.consensus[p]}&{c_optimum:.6}&{p_optimum:.6}&{self.transform(p_optimum,c_optimum):.6}+")

@@ -10,47 +10,7 @@ getcontext().prec = 100
 
 np.random.seed(91)
 
-def next_swap_close(f, x: Solution):
-    y = copy.deepcopy(x)
-    n = len(y.permutation)
-
-    for i in range(1, n):
-        y.permutation[i], y.permutation[i-1] = y.permutation[i-1], y.permutation[i]
-        y.value, y.c_value, y.p_value = f.evaluate(y, c_value=y.c_value)
-
-        if y.value < x.value:
-            return y
-        else:
-            # undoing the change to no copy the solution again
-            y.permutation[i], y.permutation[i-1] = y.permutation[i-1], y.permutation[i]
-
-    return y
-
-def next_swap_invertion(f, x: Solution):
-    y = copy.deepcopy(x)
-    n = len(y.permutation)
-    # same computational cost as copy the invertion
-    invertion = np.argsort(y.permutation)
-
-    for i in range(1, n):
-        j, k = invertion[i-1], invertion[i]
-        invertion[i], invertion[i-1] = invertion[i-1], invertion[i]
-
-        y.permutation[j], y.permutation[k] = y.permutation[k], y.permutation[j]
-        y.value, y.c_value, y.p_value = f.evaluate(y, c_value=y.c_value)
-
-        if y.value < x.value:
-            return y
-        else:
-            # undoing the change to no copy the solution again
-            y.permutation[j], y.permutation[k] = y.permutation[k], y.permutation[j]
-            invertion[i], invertion[i-1] = invertion[i-1], invertion[i]
-
-            assert (all(invertion == np.argsort(y.permutation)))
-
-    return y
-
-def next_swap(f: ObjectiveFunction, x : Solution, num_evals:int, log = True):
+def mostImprovedSwap(f: ObjectiveFunction, x : Solution, num_evals:int, log = True):
     y = copy.deepcopy(x)
     k = x
     n = len(y.permutation)
@@ -90,7 +50,7 @@ def numerical_gradient(fobj: ObjectiveFunction, x: Solution, epsilon=1e-6):
         grad[i] = (ev_x1 - ev_x2) / Decimal(2 * epsilon)
     return grad
 
-def continuos_step(objective: ObjectiveFunction, x: Solution, num_evals: int, step =1e-3, num_steps = 100, log = True):
+def continuosGradientStep(objective: ObjectiveFunction, x: Solution, num_evals: int, step =1e-3, num_steps = 100, log = True):
     y = copy.deepcopy(x)
     k = copy.deepcopy(x)
     n_steps = 0
@@ -132,11 +92,11 @@ def step(objective: ObjectiveFunction, x: Solution, next, num_evals, strategy, l
         x.print(num_evals, strategy)
 
     if strategy == "C":
-        y = continuos_step(objective, x, num_evals= num_evals, log= log)
+        y = continuosGradientStep(objective, x, num_evals= num_evals, log= log)
         p = next(objective, x, num_evals = num_evals, log = log)
     else:
         y = next(objective, x, num_evals, log = log)
-        p = continuos_step(objective, y, num_evals = num_evals, log = log)
+        p = continuosGradientStep(objective, y, num_evals = num_evals, log = log)
 
     return p
 
@@ -165,9 +125,9 @@ def select_solver_strategy(f, x: Solution, next) -> str:
         else:
             continuos_strategy += 1
         
-        if continuos_strategy >= 5:
+        if continuos_strategy >= 10:
             return "C"
-        if discret_strategy >= 5:
+        if discret_strategy >= 10:
             return "P"
 
 def solve(fobj: ObjectiveFunction, x: Solution, next, strategy = "C", maxeval=50, log = True):
@@ -227,9 +187,7 @@ objective_functions = {
 }
 
 strategies = {
-    'n': next_swap, 
-    'nc': next_swap_close,
-    'nsi': next_swap_invertion
+    'n': mostImprovedSwap
 }
 
 def run(continuos_dimension: int, permutation_size: int, difficulty: str, distance: str, continuos_minima: int, next:str, objective:str, attempts: int = 30):
@@ -252,15 +210,15 @@ def run(continuos_dimension: int, permutation_size: int, difficulty: str, distan
     pass
 
 dimensions = [2]
-sizes = [5]
+sizes = [4]
 distances = ["K"]
-nexts = [next_swap]
+nexts = [mostImprovedSwap]
 objectives: List[ObjectiveFunction] = [
     SingleDiscretMultipleContinuos(), 
     SingleContinuosMultipleDiscret(), 
     MixOfIndependentSpaces()]
 number_of_evaluations_for_each_experiment = 1
-number_of_continuos_minima = 2
+number_of_continuos_minima = 5
 number_of_permutation_minima = sizes[0]
 
 for dimension in dimensions:
