@@ -3,7 +3,7 @@ import numpy as np
 import copy
 from .utils import plot_optimization_histories, plot_samples, plot_samples_with_ci
 from decimal import Decimal, getcontext
-from typing import List
+from typing import List, Dict
 import os
 
 getcontext().prec = 100
@@ -180,7 +180,7 @@ def define_strategy_and_solve(fobj: ObjectiveFunction, x: Solution, next, maxeva
 
     return solve(fobj, x, next, strategy, maxeval, log = True)
 
-objective_functions = {
+objective_functions: Dict[str,ObjectiveFunction] = {
     'mif': MixOfIndependentSpaces(),
     'scmd': SingleContinuosMultipleDiscret(),
     'sdmc': SingleDiscretMultipleContinuos()
@@ -194,14 +194,14 @@ def run(continuos_dimension: int, permutation_size: int, difficulty: str, distan
     next_str = strategies[next]
     objective_function = objective_functions[objective]
 
-    objective_function.calculate_parameters(continuos_dimension=continuos_dimension, 
-                                                        permutation_size=permutation_size, 
-                                                        continuos_minima=continuos_minima, 
-                                                        permutation_minima=permutation_size,
-                                                        distance=distance,
-                                                        difficult=difficulty)
+    objective_function.defineDomains(   continuosDimension=continuos_dimension, 
+                                        discretDimension=permutation_size, 
+                                        numberOfContinuosMinima=continuos_minima, 
+                                        numberOfDiscretMinima=permutation_size,
+                                        distance=distance,
+                                        difficult=difficulty)
     
-    objective_function.log_info()
+    objective_function.log()
                         
     x = Solution(dimension=continuos_dimension, permutation_size=permutation_size)
     objective_function.evaluate(x)
@@ -209,61 +209,61 @@ def run(continuos_dimension: int, permutation_size: int, difficulty: str, distan
     define_strategy_and_solve(objective_function, x, next=next_str, maxeval=attempts)
     pass
 
-dimensions = [2]
-sizes = [4]
-distances = ["K"]
-nexts = [mostImprovedSwap]
-objectives: List[ObjectiveFunction] = [
-    SingleDiscretMultipleContinuos(), 
-    SingleContinuosMultipleDiscret(), 
-    MixOfIndependentSpaces()]
-number_of_evaluations_for_each_experiment = 1
-number_of_continuos_minima = 5
-number_of_permutation_minima = sizes[0]
+# dimensions = [2]
+# sizes = [4]
+# distances = ["K"]
+# nexts = [mostImprovedSwap]
+# objectives: List[ObjectiveFunction] = [
+#     SingleDiscretMultipleContinuos(), 
+#     SingleContinuosMultipleDiscret(), 
+#     MixOfIndependentSpaces()]
+# number_of_evaluations_for_each_experiment = 1
+# number_of_continuos_minima = 5
+# number_of_permutation_minima = sizes[0]
 
-for dimension in dimensions:
-    for permutation_size in sizes:
-            for distance in distances:
-                for next in nexts:
-                    for objective_function in objectives:
-                        objective_function.defineDomains(continuosDimension=dimension, 
-                                                                discretDimension=permutation_size, 
-                                                                numberOfContinuosMinima=number_of_continuos_minima, 
-                                                                numberOfDiscretMinima=number_of_permutation_minima,
-                                                                distance=distance,
-                                                                difficult="H")
+# for dimension in dimensions:
+#     for permutation_size in sizes:
+#             for distance in distances:
+#                 for next in nexts:
+#                     for objective_function in objectives:
+#                         objective_function.defineDomains(continuosDimension=dimension, 
+#                                                                 discretDimension=permutation_size, 
+#                                                                 numberOfContinuosMinima=number_of_continuos_minima, 
+#                                                                 numberOfDiscretMinima=number_of_permutation_minima,
+#                                                                 distance=distance,
+#                                                                 difficult="H")
                         
-                        objective_function.log()
-                        x = Solution(dimension=dimension, permutation_size=permutation_size)
-                        objective_function.evaluate(x)
+#                         objective_function.log()
+#                         x = Solution(dimension=dimension, permutation_size=permutation_size)
+#                         objective_function.evaluate(x)
                         
-                        historic, samples, samples_p, samples_q = define_strategy_and_solve(objective_function, x, next=next, maxeval=number_of_evaluations_for_each_experiment)
+#                         historic, samples, samples_p, samples_q = define_strategy_and_solve(objective_function, x, next=next, maxeval=number_of_evaluations_for_each_experiment)
 
-                        #Create a folder for the current configuration
-                        folder_name = f"{objective_function.name}_{dimension}_{permutation_size}_{next.__name__}{distance}"
-                        os.makedirs(folder_name, exist_ok=True)
+#                         #Create a folder for the current configuration
+#                         folder_name = f"{objective_function.name}_{dimension}_{permutation_size}_{next.__name__}{distance}"
+#                         os.makedirs(folder_name, exist_ok=True)
 
 
 
-                        plot_optimization_histories(
-                            [historic], 
-                            ["QUADRATIC"],
-                            best_possible=objective_function.optima,
-                            output_path=os.path.join(folder_name, f"historic.png"),
-                            log=True
-                        )
+#                         plot_optimization_histories(
+#                             [historic], 
+#                             ["QUADRATIC"],
+#                             best_possible=objective_function.optima,
+#                             output_path=os.path.join(folder_name, f"historic.png"),
+#                             log=True
+#                         )
 
-                        plot_samples(
-                            samples, 
-                            output=os.path.join(folder_name, f"samples.png"), 
-                            best_possible=objective_function.optima,
-                            log=True
-                        )
+#                         plot_samples(
+#                             samples, 
+#                             output=os.path.join(folder_name, f"samples.png"), 
+#                             best_possible=objective_function.optima,
+#                             log=True
+#                         )
 
-                        plot_samples_with_ci(
-                            [samples_p, samples_q], 
-                            "Quadratic and Permutation Evolution", 
-                            subtitle=["Permutation", "Quadratic"],
-                            log=True,
-                            output=os.path.join(folder_name, f"ie.png")
-                        )
+#                         plot_samples_with_ci(
+#                             [samples_p, samples_q], 
+#                             "Quadratic and Permutation Evolution", 
+#                             subtitle=["Permutation", "Quadratic"],
+#                             log=True,
+#                             output=os.path.join(folder_name, f"ie.png")
+#                         )
