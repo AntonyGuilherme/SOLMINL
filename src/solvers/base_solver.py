@@ -203,53 +203,53 @@ def run(continuos_dimension: int, permutation_size: int, difficulty: str, distan
     pass
 
 
-dimensions = [2]
-sizes = [5, 10]
-distances = ["K", "H", "C"]
-nexts = [mostImprovedSwap]
-objectives: List[ObjectiveFunction] = [
-    SingleDiscretMultipleContinuos(), 
-    SingleContinuosMultipleDiscret(), 
-    MixOfIndependentSpaces()
-    ]
-number_of_evaluations_for_each_experiment = 5
+# dimensions = [2]
+# sizes = [5, 10]
+# distances = ["K", "H", "C"]
+# nexts = [mostImprovedSwap]
+# objectives: List[ObjectiveFunction] = [
+#     SingleDiscretMultipleContinuos(), 
+#     SingleContinuosMultipleDiscret(), 
+#     MixOfIndependentSpaces()
+#     ]
+# number_of_evaluations_for_each_experiment = 5
 
-for dimension in dimensions:
-    for permutation_size in sizes:
-            for distance in distances:
-                for next in nexts:
-                    for objective_function in objectives:
-                        objective_function.defineDomains(continuosDimension=dimension, 
-                                                                discretDimension=permutation_size, 
-                                                                numberOfContinuosMinima=dimension, 
-                                                                numberOfDiscretMinima=permutation_size,
-                                                                distance=distance,
-                                                                difficult="E")
+# for dimension in dimensions:
+#     for permutation_size in sizes:
+#             for distance in distances:
+#                 for next in nexts:
+#                     for objective_function in objectives:
+#                         objective_function.defineDomains(continuosDimension=dimension, 
+#                                                                 discretDimension=permutation_size, 
+#                                                                 numberOfContinuosMinima=dimension, 
+#                                                                 numberOfDiscretMinima=permutation_size,
+#                                                                 distance=distance,
+#                                                                 difficult="E")
                         
-                        objective_function.log()
-                        x = Solution(dimension=dimension, permutation_size=permutation_size)
-                        objective_function.evaluate(x)
+#                         objective_function.log()
+#                         x = Solution(dimension=dimension, permutation_size=permutation_size)
+#                         objective_function.evaluate(x)
 
 
-                        logger = Logger(True)
-                        solve(objective_function, x, next=next, logger=logger, maxeval=number_of_evaluations_for_each_experiment)
+#                         logger = Logger(True)
+#                         solve(objective_function, x, next=next, logger=logger, maxeval=number_of_evaluations_for_each_experiment)
 
-                        #Create a folder for the current configuration
-                        folder_name = f"{objective_function.name}_{dimension}_{permutation_size}_{next.__name__}{distance}"
-                        os.makedirs(folder_name, exist_ok=True)
+#                         #Create a folder for the current configuration
+#                         folder_name = f"{objective_function.name}_{dimension}_{permutation_size}_{next.__name__}{distance}"
+#                         os.makedirs(folder_name, exist_ok=True)
 
 
-                        plot_optimization_histories(
-                            [logger.historic], 
-                            ["QUADRATIC"],
-                            best_possible=objective_function.optima,
-                            output_path=os.path.join(folder_name, f"historic.png"),
-                            log=True
-                        )
+#                         plot_optimization_histories(
+#                             [logger.historic], 
+#                             ["QUADRATIC"],
+#                             best_possible=objective_function.optima,
+#                             output_path=os.path.join(folder_name, f"historic.png"),
+#                             log=True
+#                         )
 
-                        plot_samples(
-                            logger.samples, 
-                            output=os.path.join(folder_name, f"samples.png"), 
-                            best_possible=objective_function.optima,
-                            log=True
-                        )
+#                         plot_samples(
+#                             logger.samples, 
+#                             output=os.path.join(folder_name, f"samples.png"), 
+#                             best_possible=objective_function.optima,
+#                             log=True
+#                         )
