@@ -10,23 +10,64 @@ getcontext().prec = 100
 
 np.random.seed(91)
 
-def mostImprovedSwap(f: ObjectiveFunction, x : Solution, num_evals:int, log = True):
+class Logger:
+    historic: List[float]
+    samples: List[List[float]]
+    keepHistory: bool
+
+    def __init__(self, keepHistory = True):
+        self.keepHistory = keepHistory
+        self.historic = []
+        self.samples = []
+        self.temp_historic = []
+        self.temp_samples = []
+        self.solutions = []
+        pass
+
+    def print(self, x: Solution, numberOfEvaluations: int, owner: str):
+        self.temp_historic.append(x.value)
+        self.temp_samples.append(x.value)
+        self.solutions.append([copy.deepcopy(x), owner, numberOfEvaluations])
+        pass
+
+    def flush(self):
+        if self.keepHistory:
+            self.samples.append(self.temp_samples)
+            self.historic.extend(self.temp_historic)
+        
+        for x,o,n in self.solutions:
+            x.print(n, o)
+
+        self.clean()
+        pass
+
+    def clean(self):
+        self.temp_historic = []
+        self.temp_samples = []
+        self.solutions = []
+        pass
+
+def mostImprovedSwap(f: ObjectiveFunction, x : Solution, num_evals:int, logger: Logger = None):
     y = copy.deepcopy(x)
     k = x
     n = len(y.permutation)
+    improved = True
 
-    for i in range(n - 1):
-        for j in range(i+1, n):
-            y.permutation[i], y.permutation[j] = y.permutation[j], y.permutation[i]
-            f.evaluate(y, fixContinuosValue=True)
-            
-            if y.comp_p_value > k.comp_p_value:
-                k = copy.deepcopy(y)
-                if log:
-                    k.print(num_evals, "P")
-            else:
-                # undoing the change to no copy the solution again
+    while improved:
+        improved = False
+        for i in range(n - 1):
+            for j in range(i+1, n):
                 y.permutation[i], y.permutation[j] = y.permutation[j], y.permutation[i]
+                f.evaluate(y, fixContinuosValue=True)
+                
+                if  y.value < k.value or (y.value == k.value and y.comp_p_value > k.comp_p_value):
+                    k = copy.deepcopy(y)
+                    improved = True
+                    if logger is not None:
+                        logger.print(k, num_evals, "P")
+                else:
+                    # undoing the change to no copy the solution again
+                    y.permutation[i], y.permutation[j] = y.permutation[j], y.permutation[i]
     
     return k
 
@@ -50,24 +91,26 @@ def numerical_gradient(fobj: ObjectiveFunction, x: Solution, epsilon=1e-6):
         grad[i] = (ev_x1 - ev_x2) / Decimal(2 * epsilon)
     return grad
 
-def continuosGradientStep(objective: ObjectiveFunction, x: Solution, num_evals: int, step =1e-3, num_steps = 100, log = True):
+def continuosGradientStep(objective: ObjectiveFunction, x: Solution, num_evals: int, step =1e-4, logger: Logger = None):
     y = copy.deepcopy(x)
     k = copy.deepcopy(x)
     n_steps = 0
-    while n_steps < num_steps:
+    plot_space = 10**3
+    while True:
         n_steps += 1
         grad = numerical_gradient(objective, k)
         k.continuos = k.continuos - step * grad
         k.continuos = np.clip(k.continuos, 0.0, 1.0)
         objective.evaluate(k, fixDiscretValue= True)
         
-        if (k.value + Decimal(1e-5)) > y.value:
+        if (k.value + Decimal(1e-7)) > y.value:
             break
         else:
             y = copy.deepcopy(k)
     
-    if log:
-        y.print(num_evals, "C")
+        if logger is not None and n_steps == plot_space:
+            logger.print(y, num_evals, "C")
+            n_steps = 0
 
     return y
 
@@ -86,17 +129,12 @@ def random_continuos_reposition(x:Solution):
 
     return candidate
 
-def step(objective: ObjectiveFunction, x: Solution, next, num_evals, strategy, log:bool) -> Solution:
-    
-    if log:
-        x.print(num_evals, strategy)
+def step(objective: ObjectiveFunction, x: Solution, next, num_evals, logger: Logger = None) -> Solution:  
+    if logger is not None:
+            logger.print(x, num_evals, "C")
 
-    if strategy == "C":
-        y = continuosGradientStep(objective, x, num_evals= num_evals, log= log)
-        p = next(objective, x, num_evals = num_evals, log = log)
-    else:
-        y = next(objective, x, num_evals, log = log)
-        p = continuosGradientStep(objective, y, num_evals = num_evals, log = log)
+    y = continuosGradientStep(objective, x, num_evals= num_evals, logger = logger)
+    p = next(objective, y, num_evals = num_evals, logger = logger)
 
     return p
 
@@ -106,31 +144,7 @@ def change(objective: ObjectiveFunction, x: Solution):
     objective.evaluate(x)
     pass
 
-def select_solver_strategy(f, x: Solution, next) -> str:
-    _, samplesC, _, _ = solve(f, x, next, maxeval= 10, strategy= "C", log = False)
-    _, samplesP, _, _ = solve(f, x, next,  maxeval= 10, strategy= "P", log = False)
-
-    results = []
-    for i, sc in enumerate(samplesC):
-        results.append((sc[-1],"C"))
-        results.append((samplesP[i][-1],"P"))
-
-    results.sort(key=lambda x: x[0])
-
-    continuos_strategy = 0
-    discret_strategy = 0
-    for r in results:
-        if r[1] == "P":
-            discret_strategy += 1
-        else:
-            continuos_strategy += 1
-        
-        if continuos_strategy >= 10:
-            return "C"
-        if discret_strategy >= 10:
-            return "P"
-
-def solve(fobj: ObjectiveFunction, x: Solution, next, strategy = "C", maxeval=50, log = True):
+def solve(fobj: ObjectiveFunction, x: Solution, next, maxeval=50, logger: Logger = None):
         """
         Args:
             *change_nbg*: It is a callback function that will be call whenever a better solution is not found.
@@ -143,42 +157,21 @@ def solve(fobj: ObjectiveFunction, x: Solution, next, strategy = "C", maxeval=50
         samples_q = [[]]
         samples_p = [[]]
 
-        # Initial evaluation
-        num_evals += 1
-        history.append(x.value)
-        samples[-1].append(x.value)
-        samples_q[-1].append(x.c_value)
-        samples_p[-1].append(x.p_value)
-
-        while num_evals <= maxeval:
-            y = step(fobj, x, next, num_evals, strategy= strategy, log=log)
+        while num_evals < maxeval:
+            y = step(fobj, x, next, num_evals, logger = logger)
 
             if y.value < x.value or (y.value == x.value and y.comp_p_value > x.comp_p_value):
                 x = y
-                history.append(x.value)
-                samples[-1].append(x.value)
-                samples_q[-1].append(x.c_value)
-                samples_p[-1].append(x.p_value)
+
+                if logger is not None:
+                    logger.flush()
 
             else:
                 num_evals += 1
                 if num_evals > maxeval:
                     break
                 change(fobj, x)
-                samples.append([])
-                samples_q.append([])
-                samples_p.append([])
-                history.append(x.value)
-                samples[-1].append(x.value)
-                samples_q[-1].append(x.c_value)
-                samples_p[-1].append(x.p_value)
-
-        return history, samples, samples_p, samples_q
-
-def define_strategy_and_solve(fobj: ObjectiveFunction, x: Solution, next, maxeval=50):
-    strategy = select_solver_strategy(fobj, x, next)
-
-    return solve(fobj, x, next, strategy, maxeval, log = True)
+                logger.clean()
 
 objective_functions: Dict[str,ObjectiveFunction] = {
     'mif': MixOfIndependentSpaces(),
@@ -200,70 +193,63 @@ def run(continuos_dimension: int, permutation_size: int, difficulty: str, distan
                                         numberOfDiscretMinima=permutation_size,
                                         distance=distance,
                                         difficult=difficulty)
-    
+
     objective_function.log()
                         
     x = Solution(dimension=continuos_dimension, permutation_size=permutation_size)
     objective_function.evaluate(x)
 
-    define_strategy_and_solve(objective_function, x, next=next_str, maxeval=attempts)
+    solve(objective_function, x, next=next_str, maxeval=attempts, logger = Logger())
     pass
 
-# dimensions = [2]
-# sizes = [4]
-# distances = ["K"]
-# nexts = [mostImprovedSwap]
-# objectives: List[ObjectiveFunction] = [
-#     SingleDiscretMultipleContinuos(), 
-#     SingleContinuosMultipleDiscret(), 
-#     MixOfIndependentSpaces()]
-# number_of_evaluations_for_each_experiment = 1
-# number_of_continuos_minima = 5
-# number_of_permutation_minima = sizes[0]
 
-# for dimension in dimensions:
-#     for permutation_size in sizes:
-#             for distance in distances:
-#                 for next in nexts:
-#                     for objective_function in objectives:
-#                         objective_function.defineDomains(continuosDimension=dimension, 
-#                                                                 discretDimension=permutation_size, 
-#                                                                 numberOfContinuosMinima=number_of_continuos_minima, 
-#                                                                 numberOfDiscretMinima=number_of_permutation_minima,
-#                                                                 distance=distance,
-#                                                                 difficult="H")
+dimensions = [2]
+sizes = [5, 10]
+distances = ["K", "H", "C"]
+nexts = [mostImprovedSwap]
+objectives: List[ObjectiveFunction] = [
+    SingleDiscretMultipleContinuos(), 
+    SingleContinuosMultipleDiscret(), 
+    MixOfIndependentSpaces()
+    ]
+number_of_evaluations_for_each_experiment = 5
+
+for dimension in dimensions:
+    for permutation_size in sizes:
+            for distance in distances:
+                for next in nexts:
+                    for objective_function in objectives:
+                        objective_function.defineDomains(continuosDimension=dimension, 
+                                                                discretDimension=permutation_size, 
+                                                                numberOfContinuosMinima=dimension, 
+                                                                numberOfDiscretMinima=permutation_size,
+                                                                distance=distance,
+                                                                difficult="E")
                         
-#                         objective_function.log()
-#                         x = Solution(dimension=dimension, permutation_size=permutation_size)
-#                         objective_function.evaluate(x)
-                        
-#                         historic, samples, samples_p, samples_q = define_strategy_and_solve(objective_function, x, next=next, maxeval=number_of_evaluations_for_each_experiment)
-
-#                         #Create a folder for the current configuration
-#                         folder_name = f"{objective_function.name}_{dimension}_{permutation_size}_{next.__name__}{distance}"
-#                         os.makedirs(folder_name, exist_ok=True)
+                        objective_function.log()
+                        x = Solution(dimension=dimension, permutation_size=permutation_size)
+                        objective_function.evaluate(x)
 
 
+                        logger = Logger(True)
+                        solve(objective_function, x, next=next, logger=logger, maxeval=number_of_evaluations_for_each_experiment)
 
-#                         plot_optimization_histories(
-#                             [historic], 
-#                             ["QUADRATIC"],
-#                             best_possible=objective_function.optima,
-#                             output_path=os.path.join(folder_name, f"historic.png"),
-#                             log=True
-#                         )
+                        #Create a folder for the current configuration
+                        folder_name = f"{objective_function.name}_{dimension}_{permutation_size}_{next.__name__}{distance}"
+                        os.makedirs(folder_name, exist_ok=True)
 
-#                         plot_samples(
-#                             samples, 
-#                             output=os.path.join(folder_name, f"samples.png"), 
-#                             best_possible=objective_function.optima,
-#                             log=True
-#                         )
 
-#                         plot_samples_with_ci(
-#                             [samples_p, samples_q], 
-#                             "Quadratic and Permutation Evolution", 
-#                             subtitle=["Permutation", "Quadratic"],
-#                             log=True,
-#                             output=os.path.join(folder_name, f"ie.png")
-#                         )
+                        plot_optimization_histories(
+                            [logger.historic], 
+                            ["QUADRATIC"],
+                            best_possible=objective_function.optima,
+                            output_path=os.path.join(folder_name, f"historic.png"),
+                            log=True
+                        )
+
+                        plot_samples(
+                            logger.samples, 
+                            output=os.path.join(folder_name, f"samples.png"), 
+                            best_possible=objective_function.optima,
+                            log=True
+                        )

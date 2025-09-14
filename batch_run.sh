@@ -2,10 +2,10 @@
 
 continuos_dimensions=(2 5 10 20 30)
 permutations_sizes=(5 10 20 30)
-permutation_distances=('K' 'C')
+permutation_distances=('K' 'C' 'H')
 difficulty = ('E' 'H')
 permutations_solver_strategies=('n')
-instance=('mif', 'qlm')
+instance=('mif' 'scmd' 'sdmc')
 
 for run in {1..10}; do
     for cd in "${continuos_dimensions[@]}"; do
