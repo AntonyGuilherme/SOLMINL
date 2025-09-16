@@ -25,8 +25,9 @@ class Logger:
         pass
 
     def print(self, x: Solution, numberOfEvaluations: int, owner: str):
-        self.temp_historic.append(x.value)
-        self.temp_samples.append(x.value)
+        if self.keepHistory:
+            self.temp_historic.append(x.value)
+            self.temp_samples.append(x.value)
         self.solutions.append([copy.deepcopy(x), owner, numberOfEvaluations])
         pass
 
@@ -199,7 +200,7 @@ def run(continuos_dimension: int, permutation_size: int, difficulty: str, distan
     x = Solution(dimension=continuos_dimension, permutation_size=permutation_size)
     objective_function.evaluate(x)
 
-    solve(objective_function, x, next=next_str, maxeval=attempts, logger = Logger())
+    solve(objective_function, x, next=next_str, maxeval=attempts, logger = Logger(False))
     pass
 
 
